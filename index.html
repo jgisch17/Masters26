@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Masters 2026 · The Bet</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green:   #006747;
+      --green2:  #004d35;
+      --green3:  #003326;
+      --gold:    #CBA135;
+      --gold2:   #e8c15a;
+      --bg:      #0a120d;
+      --card:    #0f1c14;
+      --card2:   #152019;
+      --border:  #1e3328;
+      --text:    #eef4f0;
+      --muted:   #7da88a;
+      --red:     #f87171;
+      --glow:    #4ade80;
+      --j:       #2563eb;
+      --t:       #dc2626;
+      --k:       #9333ea;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(180deg, #004d35 0%, #006747 60%, #004d35 100%);
+      border-bottom: 3px solid var(--gold);
+      padding: 1.75rem 2rem 1.5rem;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(
+        -45deg,
+        transparent,
+        transparent 18px,
+        rgba(0,0,0,0.06) 18px,
+        rgba(0,0,0,0.06) 36px
+      );
+    }
+    .header-inner { position: relative; z-index: 1; }
+    .flag-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .flag { font-size: 1.4rem; }
+    header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      color: var(--gold);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    header .subtitle {
+      color: #a8d5b5;
+      font-size: 0.85rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-top: 0.35rem;
+    }
+    .bet-pill {
+      display: inline-block;
+      background: var(--gold);
+      color: #000;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 0.3rem 1rem;
+      border-radius: 999px;
+      margin-top: 0.75rem;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    main {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem 3rem;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      color: var(--gold);
+      font-size: 1.05rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      text-align: center;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      justify-content: center;
+    }
+    .section-title::before,
+    .section-title::after {
+      content: '';
+      flex: 1;
+      max-width: 120px;
+      height: 1px;
+      background: linear-gradient(to right, transparent, var(--gold));
+    }
+    .section-title::after {
+      background: linear-gradient(to left, transparent, var(--gold));
+    }
+
+    /* ── LEADERBOARD ── */
+    .leaderboard-wrap { margin-bottom: 2.5rem; }
+
+    .masters-board {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+    }
+
+    .board-header {
+      background: var(--green);
+      display: grid;
+      grid-template-columns: 52px 1fr 60px 60px 60px 60px 80px;
+      padding: 0.6rem 1.25rem;
+      border-bottom: 2px solid var(--gold);
+    }
+    .board-header span {
+      font-size: 0.7rem;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--gold);
+      text-align: center;
+    }
+    .board-header span:first-child,
+    .board-header span:nth-child(2) { text-align: left; }
+
+    .board-row {
+      display: grid;
+      grid-template-columns: 52px 1fr 60px 60px 60px 60px 80px;
+      padding: 0.85rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+      align-items: center;
+      transition: background 0.15s;
+      cursor: default;
+    }
+    .board-row:last-child { border-bottom: none; }
+    .board-row:hover { background: rgba(255,255,255,0.03); }
+
+    .rank-cell {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gold);
+      font-family: 'Playfair Display', serif;
+    }
+    .rank-cell.first  { color: var(--gold2); font-size: 1.2rem; }
+    .rank-cell.second { color: #c0c0c0; }
+    .rank-cell.third  { color: #cd7f32; }
+
+    .team-cell {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .team-cell img {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid transparent;
+    }
+    .team-cell .tname {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .team-cell .tplayers {
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    .score-col {
+      text-align: center;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--muted);
+    }
+    .total-col {
+      text-align: center;
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .under { color: #fbbf24; }   /* gold = under par (Masters style) */
+    .over  { color: #f87171; }   /* red = over par */
+    .even  { color: var(--text); }
+    .mc-score { color: #fb923c; font-style: italic; }
+    .dash  { color: #4b6b57; }
+
+    /* leading team glow */
+    .board-row.leading { background: rgba(203,161,53,0.06); }
+
+    /* ── TEAM SCORECARDS ── */
+    .scorecards-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+      margin-bottom: 2.5rem;
+    }
+    @media (max-width: 960px) {
+      .scorecards-grid { grid-template-columns: 1fr; }
+    }
+
+    .scorecard {
+      background: var(--card);
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+
+    .sc-header {
+      padding: 0.85rem 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .sc-header img {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.15);
+      flex-shrink: 0;
+    }
+    .sc-title { flex: 1; }
+    .sc-title .sc-name {
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    .sc-title .sc-sub {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+    .sc-big-score {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.8rem;
+      font-weight: 700;
+      min-width: 52px;
+      text-align: right;
+    }
+
+    .sc-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .sc-table thead tr {
+      background: var(--green3);
+    }
+    .sc-table th {
+      padding: 0.45rem 0.5rem;
+      font-size: 0.67rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--gold);
+      text-align: center;
+      border-bottom: 1px solid var(--border);
+    }
+    .sc-table th:first-child { text-align: left; padding-left: 1rem; }
+
+    .sc-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .sc-table tbody tr:last-child { border-bottom: none; }
+    .sc-table tbody tr:hover { background: rgba(255,255,255,0.025); }
+    .sc-table tbody tr.cut-row { opacity: 0.65; }
+
+    .sc-table td {
+      padding: 0.55rem 0.5rem;
+      font-size: 0.82rem;
+      text-align: center;
+    }
+    .sc-table td:first-child {
+      text-align: left;
+      padding-left: 1rem;
+      font-size: 0.83rem;
+      color: var(--text);
+    }
+
+    .score-chip {
+      display: inline-block;
+      min-width: 30px;
+      padding: 0.15rem 0.3rem;
+      border-radius: 4px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .score-chip:hover { background: rgba(255,255,255,0.08); }
+    .score-chip[contenteditable="true"] {
+      outline: 1px solid var(--gold);
+      background: rgba(203,161,53,0.12);
+    }
+    .score-chip.disabled { cursor: default; }
+    .score-chip.disabled:hover { background: transparent; }
+
+    .mc-btn {
+      font-size: 0.65rem;
+      padding: 0.15rem 0.45rem;
+      border: 1px solid #3a5a45;
+      background: transparent;
+      color: #5a8a6a;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .mc-btn:hover { border-color: #fb923c; color: #fb923c; }
+    .mc-btn.active { border-color: #fb923c; color: #fb923c; background: rgba(251,146,60,0.1); }
+
+    .sc-total-row td {
+      border-top: 1px solid var(--border) !important;
+      font-weight: 700;
+      font-size: 0.85rem;
+      background: var(--card2);
+    }
+
+    /* ── CHART ── */
+    .chart-section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.5rem 1.5rem 1.25rem;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    #scoreChart { max-height: 380px; }
+
+    .chart-note {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: #3a5a45;
+      font-size: 0.72rem;
+      letter-spacing: 1px;
+    }
+
+    /* ── LAST UPDATED ── */
+    .last-updated {
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-bottom: 1.5rem;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── PRIZE BANNER ── */
+    .prize-banner {
+      display: flex;
+      justify-content: center;
+      gap: 2rem;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+    }
+    .prize-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem 1.5rem;
+      text-align: center;
+    }
+    .prize-item .p-label {
+      font-size: 0.68rem;
+      color: var(--muted);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 0.2rem;
+    }
+    .prize-item .p-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      color: var(--gold);
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ HEADER ═══════════════════ -->
+<header>
+  <div class="header-inner">
+    <div class="flag-row">
+      <span class="flag">⛳</span>
+      <h1>Masters 2026</h1>
+      <span class="flag">⛳</span>
+    </div>
+    <p class="subtitle">Augusta National · April 10 – 13, 2026</p>
+    <div class="bet-pill">$100 Buy-In · The Bet · Winner Takes $300</div>
+  </div>
+</header>
+
+<!-- ═══════════════════ MAIN ═══════════════════ -->
+<main>
+
+  <!-- PRIZE BANNER -->
+  <div class="prize-banner">
+    <div class="prize-item">
+      <div class="p-label">Prize Pool</div>
+      <div class="p-val">$300</div>
+    </div>
+    <div class="prize-item">
+      <div class="p-label">Format</div>
+      <div class="p-val" style="font-size:0.9rem;padding-top:4px;">Lowest Total Score to Par</div>
+    </div>
+    <div class="prize-item">
+      <div class="p-label">Missed Cut Penalty</div>
+      <div class="p-val">+5 / Round</div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD -->
+  <div class="leaderboard-wrap">
+    <div class="section-title">Leaderboard</div>
+    <div class="masters-board">
+      <div class="board-header">
+        <span>Pos</span>
+        <span>Team</span>
+        <span>R1</span>
+        <span>R2</span>
+        <span>R3</span>
+        <span>R4</span>
+        <span>Total</span>
+      </div>
+      <div id="leaderboard-rows"></div>
+    </div>
+  </div>
+
+  <!-- LAST UPDATED -->
+  <p class="last-updated" id="lastUpdated">— Scores not yet entered —</p>
+
+  <!-- SCORECARDS -->
+  <div class="section-title">Team Scorecards</div>
+  <p style="text-align:center;font-size:0.75rem;color:var(--muted);margin-bottom:1rem;letter-spacing:0.5px;">
+    Click any score cell to edit &nbsp;·&nbsp; MC button marks a missed cut (+5/rd)
+  </p>
+  <div class="scorecards-grid" id="scorecards"></div>
+
+  <!-- CHART -->
+  <div class="section-title">Score Tracker</div>
+  <div class="chart-section">
+    <canvas id="scoreChart"></canvas>
+    <p class="chart-note">↑ Lower score to par is better &nbsp;·&nbsp; Click a round dot to see details</p>
+  </div>
+
+</main>
+
+<footer>Augusta National Golf Club &nbsp;·&nbsp; Masters 2026 &nbsp;·&nbsp; The Bet</footer>
+
+<!-- ═══════════════════ SCRIPT ═══════════════════ -->
+<script>
+// ────────────────────────────────────────────
+//  CONSTANTS
+// ────────────────────────────────────────────
+const TEAMS = {
+  jordan: {
+    name: 'Team Jordan', short: 'Jordan', color: '#2563eb', img: 'jordan.png',
+    players: ['Scottie Scheffler','Ludvig Åberg','Jordan Spieth','Cam Young','Sahith Theegala','Tommy Fleetwood']
+  },
+  tobi: {
+    name: 'Team Tobi', short: 'Tobi', color: '#dc2626', img: 'tobi.png',
+    players: ['Xander Schauffele','Ludvig Åberg','Jason Day','Tony Finau','Sahith Theegala','Brooks Koepka']
+  },
+  kean: {
+    name: 'Team Kean', short: 'Kean', color: '#9333ea', img: 'kean.png',
+    players: ['Jon Rahm','Bryson DeChambeau','Hideki Matsuyama','Sepp Straka','Nicolai Højgaard','Tommy Fleetwood']
+  }
+};
+
+const ROUNDS = ['R1','R2','R3','R4'];
+
+// ────────────────────────────────────────────
+//  DATA
+// ────────────────────────────────────────────
+function defaultData() {
+  const d = {};
+  for (const [k, t] of Object.entries(TEAMS)) {
+    d[k] = t.players.map(name => ({ name, scores: [null,null,null,null], cutMissed: false }));
+  }
+  return d;
+}
+
+function loadData() {
+  try {
+    const s = localStorage.getItem('masters2026v2');
+    return s ? JSON.parse(s) : defaultData();
+  } catch { return defaultData(); }
+}
+
+function saveData() {
+  localStorage.setItem('masters2026v2', JSON.stringify(gameData));
+  updateTimestamp();
+  renderAll();
+}
+
+function updateTimestamp() {
+  const el = document.getElementById('lastUpdated');
+  const any = Object.values(gameData).flat().some(p => p.scores.some(s => s !== null));
+  el.textContent = any ? `Last updated: ${new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'})} · ${new Date().toLocaleDateString()}` : '— Scores not yet entered —';
+}
+
+let gameData = loadData();
+
+// ────────────────────────────────────────────
+//  CALCULATIONS
+// ────────────────────────────────────────────
+function roundScore(player, r) {
+  if (player.cutMissed && r >= 2) return 5;   // +5 penalty per round after cut
+  return player.scores[r];
+}
+
+function playerTotal(player) {
+  let sum = 0, hasScore = false;
+  for (let r = 0; r < 4; r++) {
+    const s = roundScore(player, r);
+    if (s !== null) { sum += s; hasScore = true; }
+  }
+  return hasScore ? sum : null;
+}
+
+function teamRoundTotal(key, r) {
+  const players = gameData[key];
+  // Only show if at least one player has a score this round (or it's an MC auto-score round)
+  const anyReal = players.some(p => {
+    if (p.cutMissed && r >= 2) return true;
+    return p.scores[r] !== null;
+  });
+  if (!anyReal) return null;
+  return players.reduce((sum, p) => {
+    const s = roundScore(p, r);
+    return sum + (s ?? 0);
+  }, 0);
+}
+
+function teamTotal(key) {
+  return gameData[key].reduce((sum, p) => {
+    const t = playerTotal(p);
+    return sum + (t ?? 0);
+  }, 0);
+}
+
+function teamCumulative(key, throughRound) {
+  // Cumulative total through round index (0-based); returns null if no scores yet
+  let sum = 0, hasAny = false;
+  for (let r = 0; r <= throughRound; r++) {
+    const rt = teamRoundTotal(key, r);
+    if (rt !== null) { sum += rt; hasAny = true; }
+  }
+  return hasAny ? sum : null;
+}
+
+function isRoundStarted(r) {
+  return Object.values(gameData).flat().some(p => {
+    if (p.cutMissed && r >= 2) return true;
+    return p.scores[r] !== null;
+  });
+}
+
+// ────────────────────────────────────────────
+//  FORMAT HELPERS
+// ────────────────────────────────────────────
+function fmt(score) {
+  if (score === null) return '—';
+  if (score === 0) return 'E';
+  return score > 0 ? `+${score}` : `${score}`;
+}
+
+function scoreClass(score) {
+  if (score === null) return 'dash';
+  if (score < 0) return 'under';
+  if (score > 0) return 'over';
+  return 'even';
+}
+
+function rankSuffix(n) {
+  if (n === 1) return '1st';
+  if (n === 2) return '2nd';
+  if (n === 3) return '3rd';
+  return `${n}th`;
+}
+
+// ────────────────────────────────────────────
+//  LEADERBOARD
+// ────────────────────────────────────────────
+function renderLeaderboard() {
+  const sorted = Object.keys(TEAMS).sort((a, b) => teamTotal(a) - teamTotal(b));
+  const container = document.getElementById('leaderboard-rows');
+  container.innerHTML = '';
+
+  sorted.forEach((key, idx) => {
+    const team = TEAMS[key];
+    const row = document.createElement('div');
+    row.className = `board-row${idx === 0 ? ' leading' : ''}`;
+
+    const rankClass = idx === 0 ? 'first' : idx === 1 ? 'second' : 'third';
+    const total = teamTotal(key);
+
+    const roundCols = [0,1,2,3].map(r => {
+      const rt = teamRoundTotal(key, r);
+      return `<div class="score-col ${scoreClass(rt)}">${fmt(rt)}</div>`;
+    }).join('');
+
+    row.innerHTML = `
+      <div class="rank-cell ${rankClass}">${rankSuffix(idx+1)}</div>
+      <div class="team-cell">
+        <img src="${team.img}" alt="${team.name}" style="border-color:${team.color}33;">
+        <div>
+          <div class="tname" style="color:${team.color}">${team.name}</div>
+          <div class="tplayers">6 players</div>
+        </div>
+      </div>
+      ${roundCols}
+      <div class="total-col ${scoreClass(total)}" style="font-size:1.2rem;">${fmt(total)}</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+// ────────────────────────────────────────────
+//  SCORECARDS
+// ────────────────────────────────────────────
+function renderScorecards() {
+  const container = document.getElementById('scorecards');
+  container.innerHTML = '';
+
+  for (const [key, team] of Object.entries(TEAMS)) {
+    const players = gameData[key];
+    const total = teamTotal(key);
+
+    const card = document.createElement('div');
+    card.className = 'scorecard';
+    card.style.borderTop = `3px solid ${team.color}`;
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'sc-header';
+    header.style.background = `linear-gradient(135deg,${team.color}18 0%,transparent 100%)`;
+    header.innerHTML = `
+      <img src="${team.img}" alt="${team.name}" style="border-color:${team.color}55;">
+      <div class="sc-title">
+        <div class="sc-name" style="color:${team.color}">${team.name}</div>
+        <div class="sc-sub">6 players · $100 buy-in</div>
+      </div>
+      <div class="sc-big-score ${scoreClass(total)}">${fmt(total)}</div>
+    `;
+    card.appendChild(header);
+
+    // Table
+    const table = document.createElement('table');
+    table.className = 'sc-table';
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>R1</th><th>R2</th><th>R3</th><th>R4</th>
+          <th>Total</th><th>MC</th>
+        </tr>
+      </thead>
+    `;
+    const tbody = document.createElement('tbody');
+
+    players.forEach((player, pi) => {
+      const tr = document.createElement('tr');
+      if (player.cutMissed) tr.classList.add('cut-row');
+
+      const ptotal = playerTotal(player);
+
+      const roundCells = [0,1,2,3].map(r => {
+        const isMcAuto = player.cutMissed && r >= 2;
+        const score = roundScore(player, r);
+        const cls = isMcAuto ? 'mc-score' : scoreClass(score);
+        const display = isMcAuto ? '+5' : fmt(score);
+        const disabled = isMcAuto ? 'disabled' : '';
+
+        return `<td><span
+            class="score-chip ${cls} ${disabled}"
+            data-team="${key}" data-player="${pi}" data-round="${r}"
+            ${!isMcAuto ? `onclick="startEdit(this)"` : ''}
+          >${display}</span></td>`;
+      }).join('');
+
+      tr.innerHTML = `
+        <td>${player.name}</td>
+        ${roundCells}
+        <td class="${scoreClass(ptotal)}" style="font-weight:700">${fmt(ptotal)}</td>
+        <td><button class="mc-btn${player.cutMissed ? ' active' : ''}"
+          onclick="toggleCut('${key}',${pi})">${player.cutMissed ? '✓ MC' : 'MC'}</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Total row
+    const totalRow = document.createElement('tr');
+    totalRow.className = 'sc-total-row';
+    const roundTotals = [0,1,2,3].map(r => {
+      const rt = teamRoundTotal(key, r);
+      return `<td class="${scoreClass(rt)}">${fmt(rt)}</td>`;
+    }).join('');
+    totalRow.innerHTML = `
+      <td style="color:var(--muted);">Team Total</td>
+      ${roundTotals}
+      <td class="${scoreClass(total)}">${fmt(total)}</td>
+      <td></td>
+    `;
+    tbody.appendChild(totalRow);
+
+    table.appendChild(tbody);
+    card.appendChild(table);
+    container.appendChild(card);
+  }
+}
+
+// ────────────────────────────────────────────
+//  SCORE EDITING
+// ────────────────────────────────────────────
+function startEdit(el) {
+  const key = el.dataset.team;
+  const pi  = parseInt(el.dataset.player);
+  const r   = parseInt(el.dataset.round);
+  const player = gameData[key][pi];
+  if (player.cutMissed && r >= 2) return;
+
+  el.contentEditable = 'true';
+  el.focus();
+
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  function finish() {
+    el.contentEditable = 'false';
+    const raw = el.textContent.trim().replace(/\s/g,'');
+    let val = null;
+    if (raw !== '' && raw !== '—' && raw !== '-') {
+      if (raw.toLowerCase() === 'e') {
+        val = 0;
+      } else {
+        const n = parseInt(raw.replace('+',''));
+        if (!isNaN(n)) val = n;
+      }
+    }
+    player.scores[r] = val;
+    saveData();
+  }
+
+  el.addEventListener('blur', finish, { once: true });
+  el.addEventListener('keydown', function handler(e) {
+    if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
+    if (e.key === 'Escape') {
+      el.removeEventListener('blur', finish);
+      el.contentEditable = 'false';
+      el.textContent = fmt(player.scores[r]);
+      el.removeEventListener('keydown', handler);
+    }
+  });
+}
+
+function toggleCut(key, pi) {
+  gameData[key][pi].cutMissed = !gameData[key][pi].cutMissed;
+  saveData();
+}
+
+// ────────────────────────────────────────────
+//  CHART
+// ────────────────────────────────────────────
+let chart = null;
+const pointCanvases = {};
+
+function makeCircle(src, size = 44) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = c.height = size;
+      const ctx = c.getContext('2d');
+      ctx.beginPath();
+      ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+      ctx.clip();
+      ctx.drawImage(img, 0, 0, size, size);
+      resolve(c);
+    };
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
+
+function chartDatasets() {
+  return Object.entries(TEAMS).map(([key, team]) => {
+    // Data: [0 at start, cumulative after R1, R2, R3, R4]
+    const data = [0];
+    for (let r = 0; r < 4; r++) {
+      if (isRoundStarted(r)) {
+        data.push(teamCumulative(key, r));
+      } else {
+        data.push(null);
+      }
+    }
+    return {
+      label: team.name,
+      data,
+      borderColor: team.color,
+      backgroundColor: team.color + '22',
+      borderWidth: 2.5,
+      pointStyle: pointCanvases[key] || 'circle',
+      pointRadius: 22,
+      pointHoverRadius: 25,
+      tension: 0.35,
+      spanGaps: false,
+    };
+  });
+}
+
+async function initChart() {
+  const [j, t, k] = await Promise.all([
+    makeCircle('jordan.png', 44),
+    makeCircle('tobi.png',   44),
+    makeCircle('kean.png',   44),
+  ]);
+  pointCanvases.jordan = j;
+  pointCanvases.tobi   = t;
+  pointCanvases.kean   = k;
+
+  const ctx = document.getElementById('scoreChart').getContext('2d');
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['Start','R1','R2','R3','R4'],
+      datasets: chartDatasets(),
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      interaction: { intersect: false, mode: 'index' },
+      plugins: {
+        legend: {
+          labels: {
+            color: '#eef4f0',
+            font: { family: 'Inter', size: 13, weight: '500' },
+            usePointStyle: true,
+            pointStyleWidth: 18,
+            padding: 20,
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(10,18,13,0.95)',
+          borderColor: '#CBA135',
+          borderWidth: 1,
+          titleColor: '#CBA135',
+          bodyColor: '#eef4f0',
+          padding: 12,
+          callbacks: {
+            label: ctx => {
+              const v = ctx.parsed.y;
+              if (v === null) return null;
+              const s = v === 0 ? 'E' : v > 0 ? `+${v}` : `${v}`;
+              return `  ${ctx.dataset.label}: ${s}`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { color: '#7da88a', font: { family: 'Inter', size: 12 }, padding: 8 },
+        },
+        y: {
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: {
+            color: '#7da88a',
+            font: { family: 'Inter', size: 12 },
+            callback: v => v === 0 ? 'E' : v > 0 ? `+${v}` : `${v}`,
+            padding: 8,
+          },
+          title: {
+            display: true,
+            text: 'Total Score to Par (lower = better)',
+            color: '#7da88a',
+            font: { family: 'Inter', size: 11 },
+          }
+        }
+      }
+    }
+  });
+}
+
+function updateChart() {
+  if (!chart) return;
+  chart.data.datasets = chartDatasets();
+  chart.update();
+}
+
+// ────────────────────────────────────────────
+//  RENDER ALL
+// ────────────────────────────────────────────
+function renderAll() {
+  renderLeaderboard();
+  renderScorecards();
+  updateChart();
+}
+
+// ────────────────────────────────────────────
+//  INIT
+// ────────────────────────────────────────────
+renderAll();
+updateTimestamp();
+initChart();
+</script>
+</body>
+</html>
