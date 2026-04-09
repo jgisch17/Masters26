@@ -182,6 +182,14 @@
       border-radius:3px; padding:.1rem .35rem;
       vertical-align:middle; white-space:nowrap;
     }
+    /* ── HOLE BADGE (replaces tee time once player tees off) ── */
+    .hole-badge {
+      display:inline-block; margin-left:.45rem;
+      font-size:.58rem; font-weight:700; letter-spacing:.4px;
+      color:#7a4800; background:#fff0cc; border:1px solid #CBA135;
+      border-radius:3px; padding:.1rem .35rem;
+      vertical-align:middle; white-space:nowrap;
+    }
   </style>
 </head>
 <body>
@@ -256,7 +264,7 @@ var TEAMS = {
 
 // ── DATA ──
 function makeDefault() {
-  var d = { history: [], teeTimes: {} };
+  var d = { history: [], teeTimes: {}, playerThru: {} };
   var keys = Object.keys(TEAMS);
   for (var i = 0; i < keys.length; i++) {
     var k = keys[i];
@@ -303,6 +311,7 @@ function updateStamp() {
 var gd = loadData();
 if (!gd.history) gd.history = [];
 if (!gd.teeTimes) gd.teeTimes = {};
+if (!gd.playerThru) gd.playerThru = {};
 
 // Sync rosters: rebuild each team from TEAMS, preserving scores for returning players
 (function() {
@@ -478,13 +487,24 @@ function renderLB() {
 
     var row = document.createElement('div');
     row.className = 'board-row' + (i === 0 ? ' b-lead' : '');
+    // Count in-progress players for this team
+    var inProgress = 0;
+    var curR = autoDetectRound();
+    var tPlayers = gd[key];
+    for (var tp = 0; tp < tPlayers.length; tp++) {
+      if (gd.playerThru[tPlayers[tp].name] != null) inProgress++;
+    }
+    var subTxt = inProgress > 0
+      ? inProgress + ' in progress'
+      : '6 players';
+
     row.innerHTML =
       '<div class="pos-cell' + (i === 0 ? ' pos1' : '') + '">' + pos + '</div>' +
       '<div class="b-team-cell">' +
         '<img src="' + team.img + '" alt="' + team.name + '" style="border-color:' + team.color + '">' +
         '<div>' +
           '<div class="b-team-name" style="color:' + team.color + '">' + team.name + '</div>' +
-          '<div class="b-team-sub">6 players</div>' +
+          '<div class="b-team-sub">' + subTxt + '</div>' +
         '</div>' +
       '</div>' +
       rCols +
@@ -526,8 +546,12 @@ function renderSCRounds(card, team, players, key) {
     }
 
     var teeBadge = '';
-    if (!p.cutMissed && !hasTeedOff(p, curRound) && gd.teeTimes[p.name]) {
-      teeBadge = '<span class="tee-badge">' + gd.teeTimes[p.name] + '</span>';
+    if (!p.cutMissed) {
+      if (!hasTeedOff(p, curRound) && gd.teeTimes[p.name]) {
+        teeBadge = '<span class="tee-badge">' + gd.teeTimes[p.name] + '</span>';
+      } else if (hasTeedOff(p, curRound) && gd.playerThru[p.name] != null) {
+        teeBadge = '<span class="hole-badge">Hole ' + (gd.playerThru[p.name] + 1) + '</span>';
+      }
     }
 
     tr.innerHTML =
@@ -862,6 +886,35 @@ function applyCompetitors(competitors, activeRound) {
         }
       }
       if (storedTee) gd.teeTimes[ps[pi].name] = storedTee;
+
+      // Current hole — only set for in-progress players
+      var sTypeName = comp.status && comp.status.type && comp.status.type.name || '';
+      var thru = null;
+      if (sTypeName === 'STATUS_IN_PROGRESS') {
+        // Try direct thru field
+        if (comp.status && comp.status.thru != null) {
+          thru = parseInt(comp.status.thru);
+        }
+        // Fall back: parse "Thru 7" from status.detail
+        if ((thru === null || isNaN(thru)) && comp.status && comp.status.detail) {
+          var tm = comp.status.detail.match(/Thru\s+(\d+)/i);
+          if (tm) thru = parseInt(tm[1]);
+        }
+        // Fall back: count non-null hole scores we just stored
+        if ((thru === null || isNaN(thru)) && ps[pi].holeScores && ps[pi].holeScores[activeRound]) {
+          var hcount = 0;
+          for (var hh = 0; hh < 18; hh++) {
+            if (ps[pi].holeScores[activeRound][hh] !== null) hcount++;
+          }
+          if (hcount > 0) thru = hcount;
+        }
+      }
+      // Store only a valid partial-round value (0 thru 17 = holes 1-17 done, on hole 2-18)
+      if (thru !== null && !isNaN(thru) && thru >= 0 && thru < 18) {
+        gd.playerThru[ps[pi].name] = thru;
+      } else {
+        delete gd.playerThru[ps[pi].name];
+      }
     }
   }
   return { found: found, total: total, unmatched: unmatched };
