@@ -702,7 +702,8 @@ function initChart() {
             ticks: {
               color: '#6a9e7a',
               font: { family: 'Inter', size: 12 },
-              callback: function(v) { return v === 0 ? 'E' : v > 0 ? '+' + v : '' + v; },
+              callback: function(v) { if (v !== Math.round(v)) return null; return v === 0 ? 'E' : v > 0 ? '+' + v : '' + v; },
+              stepSize: 1,
               padding: 8
             },
             title: {
