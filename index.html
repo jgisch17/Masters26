@@ -5,940 +5,835 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Masters 2026 · The Bet</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --green:   #006747;
-      --green2:  #004d35;
-      --green3:  #003326;
-      --gold:    #CBA135;
-      --gold2:   #e8c15a;
-      --bg:      #0a120d;
-      --card:    #0f1c14;
-      --card2:   #152019;
-      --border:  #1e3328;
-      --text:    #eef4f0;
-      --muted:   #7da88a;
-      --red:     #f87171;
-      --glow:    #4ade80;
-      --j:       #2563eb;
-      --t:       #dc2626;
-      --k:       #9333ea;
+      --green:    #006747;
+      --green-dk: #004d35;
+      --gold:     #CBA135;
+      --cream:    #FFFEF8;
+      --cream2:   #F5F1E6;
+      --cream3:   #EDE8D8;
+      --red:      #CC0000;
+      --ink:      #1a1a1a;
+      --ink2:     #444;
+      --muted-b:  #aaa;
+      --page-bg:  #0c1e12;
+      --card-dk:  #0f1c14;
+      --border-dk:#1e3328;
+      --txt-lt:   #eef4f0;
+      --muted-dk: #6a9e7a;
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
+      background: var(--page-bg);
+      color: var(--txt-lt);
       min-height: 100vh;
     }
 
     /* ── HEADER ── */
-    header {
-      background: linear-gradient(180deg, #004d35 0%, #006747 60%, #004d35 100%);
-      border-bottom: 3px solid var(--gold);
-      padding: 1.75rem 2rem 1.5rem;
-      text-align: center;
+    header { background: var(--green); border-bottom: 4px solid var(--gold); }
+    .hdr-top {
+      background: var(--cream); border-bottom: 1px solid #ccc;
+      text-align: center; padding: .45rem 1rem;
+      font-size: .68rem; letter-spacing: 3px; text-transform: uppercase; color: var(--ink2);
+    }
+    .hdr-body { text-align: center; padding: 1.4rem 1rem 1.3rem; }
+    .hdr-body h1 {
+      font-family: 'Playfair Display', serif; font-weight: 900;
+      font-size: clamp(2rem, 5vw, 3.2rem); color: var(--cream);
+      letter-spacing: 5px; text-transform: uppercase;
+    }
+    .hdr-body .sub {
+      color: #a8d5b5; font-size: .82rem; letter-spacing: 2.5px;
+      text-transform: uppercase; margin-top: .35rem;
+    }
+    .bet-strip {
+      display: flex; justify-content: center; gap: 2.5rem;
+      margin-top: 1rem; flex-wrap: wrap;
+    }
+    .bet-stat .bs-lbl { font-size: .6rem; letter-spacing: 1.5px; text-transform: uppercase; color: #88c4a0; margin-bottom: 2px; }
+    .bet-stat .bs-val { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--gold); font-weight: 700; }
+
+    /* ── LAYOUT ── */
+    main { max-width: 1340px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+    .sec-lbl {
+      display: flex; align-items: center; gap: .75rem;
+      margin-bottom: 1.4rem; margin-top: 2.5rem;
+    }
+    .sec-lbl::before { content:''; flex:1; height:1px; background: linear-gradient(to right, transparent, var(--green)); }
+    .sec-lbl::after  { content:''; flex:1; height:1px; background: linear-gradient(to left, transparent, var(--green)); }
+    .sec-lbl span { font-size:.67rem; letter-spacing:3px; text-transform:uppercase; color:var(--gold); white-space:nowrap; font-weight:700; }
+    .last-upd { text-align:center; font-size:.7rem; color:var(--muted-dk); letter-spacing:.5px; margin-bottom:1.75rem; }
+    .hint { text-align:center; font-size:.72rem; color:var(--muted-dk); margin-bottom:1rem; letter-spacing:.5px; }
+
+    /* ── PHYSICAL SCOREBOARD ── */
+    .board-stage {
+      background: var(--green-dk);
+      padding: 14px 14px 20px;
+      border-radius: 5px;
+      box-shadow: 0 30px 80px rgba(0,0,0,.8), inset 0 1px 2px rgba(255,255,255,.08), inset 0 -4px 0 rgba(0,0,0,.3);
       position: relative;
-      overflow: hidden;
     }
-    header::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: repeating-linear-gradient(
-        -45deg,
-        transparent,
-        transparent 18px,
-        rgba(0,0,0,0.06) 18px,
-        rgba(0,0,0,0.06) 36px
-      );
+    .board-stage::before, .board-stage::after {
+      content:''; position:absolute; bottom:-26px;
+      width:18px; height:26px; background:var(--green-dk);
+      border-radius:0 0 3px 3px; box-shadow:0 4px 10px rgba(0,0,0,.5);
     }
-    .header-inner { position: relative; z-index: 1; }
-    .flag-row {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
-      margin-bottom: 0.5rem;
+    .board-stage::before { left:18%; }
+    .board-stage::after  { right:18%; }
+    .board-face { background:var(--cream); border:1px solid #c8c3b0; overflow:hidden; }
+    .board-leaders {
+      background:var(--cream); border-bottom:3px solid var(--ink);
+      text-align:center; padding:.9rem 1rem .75rem;
     }
-    .flag { font-size: 1.4rem; }
-    header h1 {
-      font-family: 'Playfair Display', serif;
-      font-size: clamp(1.8rem, 4vw, 2.8rem);
-      color: var(--gold);
-      letter-spacing: 4px;
-      text-transform: uppercase;
-      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    .board-leaders-txt {
+      font-family:'Inter', sans-serif; font-size:clamp(1.4rem,3vw,2.1rem);
+      font-weight:900; letter-spacing:12px; text-transform:uppercase; color:var(--ink);
     }
-    header .subtitle {
-      color: #a8d5b5;
-      font-size: 0.85rem;
-      letter-spacing: 2px;
-      text-transform: uppercase;
-      margin-top: 0.35rem;
+    .board-col-hdr {
+      display:grid; grid-template-columns:56px 1fr 70px 70px 70px 70px 92px;
+      background:var(--cream2); border-bottom:2px solid var(--ink); padding:.48rem 1.25rem;
     }
-    .bet-pill {
-      display: inline-block;
-      background: var(--gold);
-      color: #000;
-      font-size: 0.72rem;
-      font-weight: 700;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      padding: 0.3rem 1rem;
-      border-radius: 999px;
-      margin-top: 0.75rem;
-    }
-
-    /* ── MAIN LAYOUT ── */
-    main {
-      max-width: 1380px;
-      margin: 0 auto;
-      padding: 2rem 1.25rem 3rem;
-    }
-
-    .section-title {
-      font-family: 'Playfair Display', serif;
-      color: var(--gold);
-      font-size: 1.05rem;
-      letter-spacing: 3px;
-      text-transform: uppercase;
-      text-align: center;
-      margin-bottom: 1.25rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      justify-content: center;
-    }
-    .section-title::before,
-    .section-title::after {
-      content: '';
-      flex: 1;
-      max-width: 120px;
-      height: 1px;
-      background: linear-gradient(to right, transparent, var(--gold));
-    }
-    .section-title::after {
-      background: linear-gradient(to left, transparent, var(--gold));
-    }
-
-    /* ── LEADERBOARD ── */
-    .leaderboard-wrap { margin-bottom: 2.5rem; }
-
-    .masters-board {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.5);
-    }
-
-    .board-header {
-      background: var(--green);
-      display: grid;
-      grid-template-columns: 52px 1fr 60px 60px 60px 60px 80px;
-      padding: 0.6rem 1.25rem;
-      border-bottom: 2px solid var(--gold);
-    }
-    .board-header span {
-      font-size: 0.7rem;
-      font-weight: 600;
-      letter-spacing: 1.5px;
-      text-transform: uppercase;
-      color: var(--gold);
-      text-align: center;
-    }
-    .board-header span:first-child,
-    .board-header span:nth-child(2) { text-align: left; }
+    .board-col-hdr span { font-size:.66rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink); text-align:center; }
+    .board-col-hdr span:first-child, .board-col-hdr span:nth-child(2) { text-align:left; }
 
     .board-row {
-      display: grid;
-      grid-template-columns: 52px 1fr 60px 60px 60px 60px 80px;
-      padding: 0.85rem 1.25rem;
-      border-bottom: 1px solid var(--border);
-      align-items: center;
-      transition: background 0.15s;
-      cursor: default;
+      display:grid; grid-template-columns:56px 1fr 70px 70px 70px 70px 92px;
+      align-items:center; padding:.88rem 1.25rem;
+      border-bottom:1px solid var(--cream3); background:var(--cream);
+      transition:background .12s; cursor:default;
     }
-    .board-row:last-child { border-bottom: none; }
-    .board-row:hover { background: rgba(255,255,255,0.03); }
+    .board-row:last-child { border-bottom:none; }
+    .board-row:nth-child(even) { background:#FAF7EE; }
+    .board-row:hover { background:#F0EDD8; }
+    .board-row.b-lead { background:#FFF9EC; }
 
-    .rank-cell {
-      font-size: 1rem;
-      font-weight: 700;
-      color: var(--gold);
-      font-family: 'Playfair Display', serif;
-    }
-    .rank-cell.first  { color: var(--gold2); font-size: 1.2rem; }
-    .rank-cell.second { color: #c0c0c0; }
-    .rank-cell.third  { color: #cd7f32; }
+    .pos-cell { font-family:'Inter',sans-serif; font-size:.9rem; font-weight:700; color:var(--ink2); }
+    .pos-cell.pos1 { font-size:1.1rem; color:var(--ink); font-weight:900; }
+    .b-team-cell { display:flex; align-items:center; gap:.75rem; }
+    .b-team-cell img { width:40px; height:40px; border-radius:50%; object-fit:cover; border:2.5px solid var(--green); flex-shrink:0; }
+    .b-team-name { font-family:'Inter',sans-serif; font-size:1rem; font-weight:800; text-transform:uppercase; letter-spacing:1.5px; color:var(--ink); }
+    .b-team-sub { font-size:.65rem; color:#888; letter-spacing:.5px; }
+    .b-score { text-align:center; font-family:'Inter',sans-serif; font-size:1rem; font-weight:700; }
+    .b-total { text-align:center; font-family:'Inter',sans-serif; font-size:1.35rem; font-weight:900; }
 
-    .team-cell {
-      display: flex;
-      align-items: center;
-      gap: 0.65rem;
-    }
-    .team-cell img {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid transparent;
-    }
-    .team-cell .tname {
-      font-weight: 600;
-      font-size: 0.95rem;
-    }
-    .team-cell .tplayers {
-      font-size: 0.7rem;
-      color: var(--muted);
+    /* RED = under par (Masters board convention) */
+    .s-under { color:var(--red); }
+    .s-even  { color:var(--ink); }
+    .s-over  { color:var(--ink); }
+    .s-dash  { color:var(--muted-b); font-weight:400; }
+    .s-mc    { color:#b05000; font-style:italic; }
+
+    /* ── SCORECARDS ── */
+    .sc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.25rem; margin-bottom:.5rem; }
+    @media (max-width:980px) {
+      .sc-grid { grid-template-columns:1fr; }
+      .board-col-hdr, .board-row { grid-template-columns:44px 1fr 56px 56px 56px 56px 68px; padding:.7rem .75rem; }
     }
 
-    .score-col {
-      text-align: center;
-      font-size: 0.9rem;
-      font-weight: 500;
-      color: var(--muted);
-    }
-    .total-col {
-      text-align: center;
-      font-size: 1.15rem;
-      font-weight: 700;
-    }
+    .scorecard { background:var(--cream); border:1px solid #c8c3b0; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+    .sc-hdr { background:var(--green); padding:.8rem 1rem; display:flex; align-items:center; gap:.75rem; border-bottom:3px solid var(--gold); }
+    .sc-hdr img { width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid rgba(255,255,255,.3); flex-shrink:0; }
+    .sc-title { flex:1; }
+    .sc-name { font-weight:800; font-size:.95rem; color:var(--cream); text-transform:uppercase; letter-spacing:1.5px; }
+    .sc-sub  { font-size:.64rem; color:#88c4a0; margin-top:1px; }
+    .sc-big  { font-family:'Inter',sans-serif; font-size:1.9rem; font-weight:900; color:var(--cream); min-width:52px; text-align:right; }
+    .sc-big.s-under { color:#ff9090; }
 
-    .under { color: #fbbf24; }   /* gold = under par (Masters style) */
-    .over  { color: #f87171; }   /* red = over par */
-    .even  { color: var(--text); }
-    .mc-score { color: #fb923c; font-style: italic; }
-    .dash  { color: #4b6b57; }
+    .sc-tbl { width:100%; border-collapse:collapse; }
+    .sc-tbl thead tr { background:var(--cream2); border-bottom:2px solid var(--ink); }
+    .sc-tbl th { padding:.44rem .4rem; font-size:.62rem; font-weight:800; letter-spacing:1.5px; text-transform:uppercase; color:var(--ink); text-align:center; }
+    .sc-tbl th:first-child { text-align:left; padding-left:.85rem; }
+    .sc-tbl tbody tr { border-bottom:1px solid var(--cream3); }
+    .sc-tbl tbody tr:last-child { border-bottom:none; }
+    .sc-tbl tbody tr:nth-child(even) { background:#FAF7EE; }
+    .sc-tbl tbody tr:hover { background:#F0EDD8; }
+    .sc-tbl tbody tr.cut-row { opacity:.62; }
+    .sc-tbl td { padding:.5rem .4rem; font-size:.8rem; text-align:center; color:var(--ink); font-weight:500; }
+    .sc-tbl td:first-child { text-align:left; padding-left:.85rem; font-weight:600; }
 
-    /* leading team glow */
-    .board-row.leading { background: rgba(203,161,53,0.06); }
-
-    /* ── TEAM SCORECARDS ── */
-    .scorecards-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 1.25rem;
-      margin-bottom: 2.5rem;
-    }
-    @media (max-width: 960px) {
-      .scorecards-grid { grid-template-columns: 1fr; }
-    }
-
-    .scorecard {
-      background: var(--card);
-      border-radius: 10px;
-      overflow: hidden;
-      border: 1px solid var(--border);
-      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-    }
-
-    .sc-header {
-      padding: 0.85rem 1rem;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .sc-header img {
-      width: 42px; height: 42px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid rgba(255,255,255,0.15);
-      flex-shrink: 0;
-    }
-    .sc-title { flex: 1; }
-    .sc-title .sc-name {
-      font-weight: 700;
-      font-size: 1rem;
-    }
-    .sc-title .sc-sub {
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-top: 1px;
-    }
-    .sc-big-score {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.8rem;
-      font-weight: 700;
-      min-width: 52px;
-      text-align: right;
-    }
-
-    .sc-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .sc-table thead tr {
-      background: var(--green3);
-    }
-    .sc-table th {
-      padding: 0.45rem 0.5rem;
-      font-size: 0.67rem;
-      font-weight: 600;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--gold);
-      text-align: center;
-      border-bottom: 1px solid var(--border);
-    }
-    .sc-table th:first-child { text-align: left; padding-left: 1rem; }
-
-    .sc-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .sc-table tbody tr:last-child { border-bottom: none; }
-    .sc-table tbody tr:hover { background: rgba(255,255,255,0.025); }
-    .sc-table tbody tr.cut-row { opacity: 0.65; }
-
-    .sc-table td {
-      padding: 0.55rem 0.5rem;
-      font-size: 0.82rem;
-      text-align: center;
-    }
-    .sc-table td:first-child {
-      text-align: left;
-      padding-left: 1rem;
-      font-size: 0.83rem;
-      color: var(--text);
-    }
-
-    .score-chip {
-      display: inline-block;
-      min-width: 30px;
-      padding: 0.15rem 0.3rem;
-      border-radius: 4px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background 0.12s;
-    }
-    .score-chip:hover { background: rgba(255,255,255,0.08); }
-    .score-chip[contenteditable="true"] {
-      outline: 1px solid var(--gold);
-      background: rgba(203,161,53,0.12);
-    }
-    .score-chip.disabled { cursor: default; }
-    .score-chip.disabled:hover { background: transparent; }
-
-    .mc-btn {
-      font-size: 0.65rem;
-      padding: 0.15rem 0.45rem;
-      border: 1px solid #3a5a45;
-      background: transparent;
-      color: #5a8a6a;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: all 0.15s;
-      font-weight: 500;
-    }
-    .mc-btn:hover { border-color: #fb923c; color: #fb923c; }
-    .mc-btn.active { border-color: #fb923c; color: #fb923c; background: rgba(251,146,60,0.1); }
-
-    .sc-total-row td {
-      border-top: 1px solid var(--border) !important;
-      font-weight: 700;
-      font-size: 0.85rem;
-      background: var(--card2);
-    }
+    .chip { display:inline-block; min-width:28px; padding:.12rem .25rem; border-radius:3px; font-weight:700; }
+    .sc-tot-row td { background:var(--cream2) !important; border-top:2px solid var(--ink) !important; font-weight:800; font-size:.82rem; }
 
     /* ── CHART ── */
-    .chart-section {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 1.5rem 1.5rem 1.25rem;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.4);
-    }
-    #scoreChart { max-height: 380px; }
+    .chart-panel { background:var(--card-dk); border:1px solid var(--border-dk); border-radius:6px; padding:1.5rem 1.5rem 1.25rem; box-shadow:0 8px 32px rgba(0,0,0,.5); }
+    #scoreChart { max-height:380px; }
+    .chart-note { text-align:center; font-size:.7rem; color:var(--muted-dk); margin-top:.75rem; }
 
-    .chart-note {
-      text-align: center;
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-top: 0.75rem;
-      letter-spacing: 0.5px;
-    }
+    /* ── LIVE BAR ── */
+    .live-bar { display:flex; align-items:center; justify-content:center; gap:.65rem; margin-bottom:1.5rem; font-size:.7rem; color:var(--muted-dk); flex-wrap:wrap; }
+    @keyframes livepulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+    .live-dot { width:7px; height:7px; border-radius:50%; background:#4ade80; display:inline-block; flex-shrink:0; animation:livepulse 1.8s ease-in-out infinite; }
+    .live-dot.off { background:#3a5a45; animation:none; }
+    .live-dot.err { background:#f87171; animation:none; }
+    .refresh-btn { background:transparent; border:1px solid var(--border-dk); color:var(--muted-dk); font-family:'Inter',sans-serif; font-size:.65rem; font-weight:600; letter-spacing:.8px; padding:.22rem .65rem; border-radius:3px; cursor:pointer; transition:all .15s; }
+    .refresh-btn:hover { border-color:var(--gold); color:var(--gold); }
 
-    /* ── FOOTER ── */
-    footer {
-      text-align: center;
-      padding: 1.5rem;
-      color: #3a5a45;
-      font-size: 0.72rem;
-      letter-spacing: 1px;
-    }
-
-    /* ── LAST UPDATED ── */
-    .last-updated {
-      text-align: center;
-      font-size: 0.72rem;
-      color: var(--muted);
-      margin-bottom: 1.5rem;
-      letter-spacing: 0.5px;
-    }
-
-    /* ── PRIZE BANNER ── */
-    .prize-banner {
-      display: flex;
-      justify-content: center;
-      gap: 2rem;
-      margin-bottom: 2rem;
-      flex-wrap: wrap;
-    }
-    .prize-item {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 0.75rem 1.5rem;
-      text-align: center;
-    }
-    .prize-item .p-label {
-      font-size: 0.68rem;
-      color: var(--muted);
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 0.2rem;
-    }
-    .prize-item .p-val {
-      font-family: 'Playfair Display', serif;
-      font-size: 1.3rem;
-      color: var(--gold);
-      font-weight: 700;
-    }
+    footer { text-align:center; padding:1.5rem; font-size:.67rem; letter-spacing:2px; text-transform:uppercase; color:#2a4a35; }
   </style>
 </head>
 <body>
 
-<!-- ═══════════════════ HEADER ═══════════════════ -->
 <header>
-  <div class="header-inner">
-    <div class="flag-row">
-      <span class="flag">⛳</span>
-      <h1>Masters 2026</h1>
-      <span class="flag">⛳</span>
+  <div class="hdr-top">Augusta National Golf Club &nbsp;&middot;&nbsp; The Bet &nbsp;&middot;&nbsp; 2026</div>
+  <div class="hdr-body">
+    <h1>The Masters</h1>
+    <p class="sub">April 10 &ndash; 13, 2026 &nbsp;&middot;&nbsp; Augusta, Georgia</p>
+    <div class="bet-strip">
+      <div class="bet-stat"><div class="bs-lbl">Prize Pool</div><div class="bs-val">$300</div></div>
+      <div class="bet-stat"><div class="bs-lbl">Buy-In</div><div class="bs-val">$100</div></div>
+      <div class="bet-stat"><div class="bs-lbl">Format</div><div class="bs-val" style="font-size:.85rem;padding-top:3px;">Lowest Score to Par</div></div>
+      <div class="bet-stat"><div class="bs-lbl">MC Penalty</div><div class="bs-val">+5 / Rd</div></div>
     </div>
-    <p class="subtitle">Augusta National · April 10 – 13, 2026</p>
-    <div class="bet-pill">$100 Buy-In · The Bet · Winner Takes $300</div>
   </div>
 </header>
 
-<!-- ═══════════════════ MAIN ═══════════════════ -->
 <main>
-
-  <!-- PRIZE BANNER -->
-  <div class="prize-banner">
-    <div class="prize-item">
-      <div class="p-label">Prize Pool</div>
-      <div class="p-val">$300</div>
-    </div>
-    <div class="prize-item">
-      <div class="p-label">Format</div>
-      <div class="p-val" style="font-size:0.9rem;padding-top:4px;">Lowest Total Score to Par</div>
-    </div>
-    <div class="prize-item">
-      <div class="p-label">Missed Cut Penalty</div>
-      <div class="p-val">+5 / Round</div>
-    </div>
+  <div class="sec-lbl" style="margin-top:0"><span>Leaderboard</span></div>
+  <p class="last-upd" id="lastUpd">&#8212; Tournament begins April 10 &#8212;</p>
+  <div class="live-bar">
+    <span class="live-dot off" id="liveDot"></span>
+    <span id="liveText">Live data not yet active</span>
+    <button class="refresh-btn" onclick="fetchLive()">&#8635; Refresh Now</button>
   </div>
 
-  <!-- LEADERBOARD -->
-  <div class="leaderboard-wrap">
-    <div class="section-title">Leaderboard</div>
-    <div class="masters-board">
-      <div class="board-header">
-        <span>Pos</span>
-        <span>Team</span>
-        <span>R1</span>
-        <span>R2</span>
-        <span>R3</span>
-        <span>R4</span>
-        <span>Total</span>
+  <div class="board-stage">
+    <div class="board-face">
+      <div class="board-leaders"><div class="board-leaders-txt">Leaders</div></div>
+      <div class="board-col-hdr">
+        <span>Pos</span><span>Team</span>
+        <span>R1</span><span>R2</span><span>R3</span><span>R4</span><span>Total</span>
       </div>
-      <div id="leaderboard-rows"></div>
+      <div id="lb-rows"></div>
     </div>
   </div>
 
-  <!-- LAST UPDATED -->
-  <p class="last-updated" id="lastUpdated">— Scores not yet entered —</p>
+  <div class="sec-lbl"><span>Team Scorecards</span></div>
+  <div class="sc-grid" id="sc-grid"></div>
 
-  <!-- SCORECARDS -->
-  <div class="section-title">Team Scorecards</div>
-  <p style="text-align:center;font-size:0.75rem;color:var(--muted);margin-bottom:1rem;letter-spacing:0.5px;">
-    Click any score cell to edit &nbsp;·&nbsp; MC button marks a missed cut (+5/rd)
-  </p>
-  <div class="scorecards-grid" id="scorecards"></div>
-
-  <!-- CHART -->
-  <div class="section-title">Score Tracker</div>
-  <div class="chart-section">
+  <div class="sec-lbl"><span>Score Tracker</span></div>
+  <div class="chart-panel">
     <canvas id="scoreChart"></canvas>
-    <p class="chart-note">↑ Lower score to par is better &nbsp;·&nbsp; Click a round dot to see details</p>
+    <p class="chart-note">Lower score to par is better &nbsp;&middot;&nbsp; Each dot = one hourly ESPN update &nbsp;&middot;&nbsp; Hover for details</p>
   </div>
-
 </main>
 
-<footer>Augusta National Golf Club &nbsp;·&nbsp; Masters 2026 &nbsp;·&nbsp; The Bet</footer>
+<footer>Augusta National &nbsp;&middot;&nbsp; Masters 2026 &nbsp;&middot;&nbsp; The Bet</footer>
 
-<!-- ═══════════════════ SCRIPT ═══════════════════ -->
 <script>
-// ────────────────────────────────────────────
-//  CONSTANTS
-// ────────────────────────────────────────────
-const TEAMS = {
+var TEAMS = {
   jordan: {
-    name: 'Team Jordan', short: 'Jordan', color: '#2563eb', img: 'jordan.png',
-    players: ['Scottie Scheffler','Ludvig Åberg','Jordan Spieth','Cam Young','Sahith Theegala','Tommy Fleetwood']
+    name: 'Team Jordan',
+    color: '#1d4ed8',
+    img: 'jordan.png',
+    players: ['Scottie Scheffler', 'Ludvig Aberg', 'Jordan Spieth', 'Cameron Young', 'Nicolai Højgaard', 'Tommy Fleetwood']
   },
   tobi: {
-    name: 'Team Tobi', short: 'Tobi', color: '#dc2626', img: 'tobi.png',
-    players: ['Xander Schauffele','Ludvig Åberg','Jason Day','Tony Finau','Sahith Theegala','Brooks Koepka']
+    name: 'Team Tobi',
+    color: '#b91c1c',
+    img: 'tobi.png',
+    players: ['Xander Schauffele', 'Ludvig Aberg', 'Jason Day', 'Ryan Fox', 'Sepp Straka', 'Brooks Koepka']
   },
   kean: {
-    name: 'Team Kean', short: 'Kean', color: '#9333ea', img: 'kean.png',
-    players: ['Jon Rahm','Bryson DeChambeau','Hideki Matsuyama','Sepp Straka','Nicolai Højgaard','Tommy Fleetwood']
+    name: 'Team Kean',
+    color: '#7c3aed',
+    img: 'kean.png',
+    players: ['Jon Rahm', 'Bryson DeChambeau', 'Hideki Matsuyama', 'Sepp Straka', 'Nicolai Højgaard', 'Tommy Fleetwood']
   }
 };
 
-const ROUNDS = ['R1','R2','R3','R4'];
-
-// ────────────────────────────────────────────
-//  DATA
-// ────────────────────────────────────────────
-function defaultData() {
-  const d = {};
-  for (const [k, t] of Object.entries(TEAMS)) {
-    d[k] = t.players.map(name => ({ name, scores: [null,null,null,null], cutMissed: false }));
+// ── DATA ──
+function makeDefault() {
+  var d = { history: [] };
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    d[k] = TEAMS[k].players.map(function(name) {
+      return { name: name, scores: [null, null, null, null], cutMissed: false };
+    });
   }
   return d;
 }
 
 function loadData() {
   try {
-    const s = localStorage.getItem('masters2026v2');
-    return s ? JSON.parse(s) : defaultData();
-  } catch { return defaultData(); }
+    var s = localStorage.getItem('masters2026bet');
+    if (s) return JSON.parse(s);
+  } catch(e) {}
+  return makeDefault();
 }
 
-function saveData() {
-  localStorage.setItem('masters2026v2', JSON.stringify(gameData));
-  updateTimestamp();
-  renderAll();
+function updateStamp() {
+  if (liveActive) return; // live fetch manages the timestamp
+  var el = document.getElementById('lastUpd');
+  var any = false;
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    for (var j = 0; j < gd[keys[i]].length; j++) {
+      if (gd[keys[i]][j].scores.some(function(s) { return s !== null; })) { any = true; break; }
+    }
+  }
+  el.textContent = any
+    ? 'Last updated ' + new Date().toLocaleTimeString('en-US', {hour:'2-digit', minute:'2-digit'}) + ' \u00b7 ' + new Date().toLocaleDateString()
+    : '\u2014 Tournament begins April 10 \u2014';
 }
 
-function updateTimestamp() {
-  const el = document.getElementById('lastUpdated');
-  const any = Object.values(gameData).flat().some(p => p.scores.some(s => s !== null));
-  el.textContent = any ? `Last updated: ${new Date().toLocaleTimeString('en-US', {hour:'2-digit',minute:'2-digit'})} · ${new Date().toLocaleDateString()}` : '— Scores not yet entered —';
-}
+var gd = loadData();
+if (!gd.history) gd.history = [];
 
-let gameData = loadData();
+// Sync rosters: rebuild each team from TEAMS, preserving scores for returning players
+(function() {
+  var teamKeys = Object.keys(TEAMS);
+  for (var i = 0; i < teamKeys.length; i++) {
+    var key = teamKeys[i];
+    var oldPlayers = gd[key] || [];
+    var oldByName = {};
+    for (var j = 0; j < oldPlayers.length; j++) {
+      oldByName[oldPlayers[j].name] = oldPlayers[j];
+    }
+    gd[key] = TEAMS[key].players.map(function(name) {
+      return oldByName[name] || { name: name, scores: [null, null, null, null], cutMissed: false };
+    });
+  }
+  localStorage.setItem('masters2026bet', JSON.stringify(gd));
+})();
+var liveActive = false;
 
-// ────────────────────────────────────────────
-//  CALCULATIONS
-// ────────────────────────────────────────────
+// ── CALCULATIONS ──
 function roundScore(player, r) {
-  if (player.cutMissed && r >= 2) return 5;   // +5 penalty per round after cut
+  if (player.cutMissed && r >= 2) return 5;
   return player.scores[r];
 }
 
 function playerTotal(player) {
-  let sum = 0, hasScore = false;
-  for (let r = 0; r < 4; r++) {
-    const s = roundScore(player, r);
-    if (s !== null) { sum += s; hasScore = true; }
+  var sum = 0, has = false;
+  for (var r = 0; r < 4; r++) {
+    var v = roundScore(player, r);
+    if (v !== null) { sum += v; has = true; }
   }
-  return hasScore ? sum : null;
+  return has ? sum : null;
 }
 
 function teamRoundTotal(key, r) {
-  const players = gameData[key];
-  // Only show if at least one player has a score this round (or it's an MC auto-score round)
-  const anyReal = players.some(p => {
-    if (p.cutMissed && r >= 2) return true;
-    return p.scores[r] !== null;
-  });
-  if (!anyReal) return null;
-  return players.reduce((sum, p) => {
-    const s = roundScore(p, r);
-    return sum + (s ?? 0);
-  }, 0);
+  var ps = gd[key];
+  var any = false;
+  for (var i = 0; i < ps.length; i++) {
+    if ((ps[i].cutMissed && r >= 2) || ps[i].scores[r] !== null) { any = true; break; }
+  }
+  if (!any) return null;
+  var sum = 0;
+  for (var i = 0; i < ps.length; i++) {
+    var v = roundScore(ps[i], r);
+    sum += (v !== null ? v : 0);
+  }
+  return sum;
 }
 
 function teamTotal(key) {
-  return gameData[key].reduce((sum, p) => {
-    const t = playerTotal(p);
-    return sum + (t ?? 0);
-  }, 0);
+  var ps = gd[key];
+  var sum = 0;
+  for (var i = 0; i < ps.length; i++) {
+    var t = playerTotal(ps[i]);
+    sum += (t !== null ? t : 0);
+  }
+  return sum;
 }
 
-function teamCumulative(key, throughRound) {
-  // Cumulative total through round index (0-based); returns null if no scores yet
-  let sum = 0, hasAny = false;
-  for (let r = 0; r <= throughRound; r++) {
-    const rt = teamRoundTotal(key, r);
-    if (rt !== null) { sum += rt; hasAny = true; }
+function teamCumulative(key, thru) {
+  var sum = 0, has = false;
+  for (var r = 0; r <= thru; r++) {
+    var rt = teamRoundTotal(key, r);
+    if (rt !== null) { sum += rt; has = true; }
   }
-  return hasAny ? sum : null;
+  return has ? sum : null;
 }
 
 function isRoundStarted(r) {
-  return Object.values(gameData).flat().some(p => {
-    if (p.cutMissed && r >= 2) return true;
-    return p.scores[r] !== null;
-  });
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    var ps = gd[keys[i]];
+    for (var j = 0; j < ps.length; j++) {
+      if ((ps[j].cutMissed && r >= 2) || ps[j].scores[r] !== null) return true;
+    }
+  }
+  return false;
 }
 
-// ────────────────────────────────────────────
-//  FORMAT HELPERS
-// ────────────────────────────────────────────
-function fmt(score) {
-  if (score === null) return '—';
-  if (score === 0) return 'E';
-  return score > 0 ? `+${score}` : `${score}`;
+function activeRoundLabel() {
+  for (var r = 3; r >= 0; r--) {
+    if (isRoundStarted(r)) return 'R' + (r + 1);
+  }
+  return 'Pre';
 }
 
-function scoreClass(score) {
-  if (score === null) return 'dash';
-  if (score < 0) return 'under';
-  if (score > 0) return 'over';
-  return 'even';
+function addSnapshot() {
+  var h = gd.history;
+  // Skip if last snapshot was less than 15 minutes ago (prevents duplicates on rapid refreshes)
+  if (h.length > 0) {
+    var last = new Date(h[h.length - 1].timestamp);
+    if (Date.now() - last < 15 * 60 * 1000) return;
+  }
+  var now = new Date();
+  var label = activeRoundLabel() + ' \u00b7 ' + now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  var scores = {};
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var sum = 0, hasAny = false;
+    for (var r = 0; r < 4; r++) {
+      var rt = teamRoundTotal(key, r);
+      if (rt !== null) { sum += rt; hasAny = true; }
+    }
+    scores[key] = hasAny ? sum : 0;
+  }
+  h.push({ timestamp: now.toISOString(), label: label, scores: scores });
 }
 
-function rankSuffix(n) {
-  if (n === 1) return '1st';
-  if (n === 2) return '2nd';
-  if (n === 3) return '3rd';
-  return `${n}th`;
+// ── FORMATTING ──
+function fmt(v) {
+  if (v === null) return '&mdash;';
+  if (v === 0) return 'E';
+  return v > 0 ? '+' + v : '' + v;
 }
 
-// ────────────────────────────────────────────
-//  LEADERBOARD
-// ────────────────────────────────────────────
-function renderLeaderboard() {
-  const sorted = Object.keys(TEAMS).sort((a, b) => teamTotal(a) - teamTotal(b));
-  const container = document.getElementById('leaderboard-rows');
-  container.innerHTML = '';
-
-  sorted.forEach((key, idx) => {
-    const team = TEAMS[key];
-    const row = document.createElement('div');
-    row.className = `board-row${idx === 0 ? ' leading' : ''}`;
-
-    const rankClass = idx === 0 ? 'first' : idx === 1 ? 'second' : 'third';
-    const total = teamTotal(key);
-
-    const roundCols = [0,1,2,3].map(r => {
-      const rt = teamRoundTotal(key, r);
-      return `<div class="score-col ${scoreClass(rt)}">${fmt(rt)}</div>`;
-    }).join('');
-
-    row.innerHTML = `
-      <div class="rank-cell ${rankClass}">${rankSuffix(idx+1)}</div>
-      <div class="team-cell">
-        <img src="${team.img}" alt="${team.name}" style="border-color:${team.color}33;">
-        <div>
-          <div class="tname" style="color:${team.color}">${team.name}</div>
-          <div class="tplayers">6 players</div>
-        </div>
-      </div>
-      ${roundCols}
-      <div class="total-col ${scoreClass(total)}" style="font-size:1.2rem;">${fmt(total)}</div>
-    `;
-    container.appendChild(row);
-  });
+function fmtPlain(v) {
+  if (v === null) return '—';
+  if (v === 0) return 'E';
+  return v > 0 ? '+' + v : '' + v;
 }
 
-// ────────────────────────────────────────────
-//  SCORECARDS
-// ────────────────────────────────────────────
-function renderScorecards() {
-  const container = document.getElementById('scorecards');
-  container.innerHTML = '';
+function scoreClass(v) {
+  if (v === null) return 's-dash';
+  if (v < 0) return 's-under';
+  if (v > 0) return 's-over';
+  return 's-even';
+}
 
-  for (const [key, team] of Object.entries(TEAMS)) {
-    const players = gameData[key];
-    const total = teamTotal(key);
+// ── LEADERBOARD ──
+function renderLB() {
+  var keys = Object.keys(TEAMS);
+  keys.sort(function(a, b) { return teamTotal(a) - teamTotal(b); });
 
-    const card = document.createElement('div');
+  var el = document.getElementById('lb-rows');
+  el.innerHTML = '';
+
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var team = TEAMS[key];
+    var total = teamTotal(key);
+    var pos = i === 0 ? '1st' : i === 1 ? '2nd' : '3rd';
+
+    var rCols = '';
+    for (var r = 0; r < 4; r++) {
+      var rt = teamRoundTotal(key, r);
+      rCols += '<div class="b-score ' + scoreClass(rt) + '">' + fmt(rt) + '</div>';
+    }
+
+    var row = document.createElement('div');
+    row.className = 'board-row' + (i === 0 ? ' b-lead' : '');
+    row.innerHTML =
+      '<div class="pos-cell' + (i === 0 ? ' pos1' : '') + '">' + pos + '</div>' +
+      '<div class="b-team-cell">' +
+        '<img src="' + team.img + '" alt="' + team.name + '" style="border-color:' + team.color + '">' +
+        '<div>' +
+          '<div class="b-team-name" style="color:' + team.color + '">' + team.name + '</div>' +
+          '<div class="b-team-sub">6 players</div>' +
+        '</div>' +
+      '</div>' +
+      rCols +
+      '<div class="b-total ' + scoreClass(total) + '">' + fmt(total) + '</div>';
+
+    el.appendChild(row);
+  }
+}
+
+// ── SCORECARDS ──
+function renderSC() {
+  var el = document.getElementById('sc-grid');
+  el.innerHTML = '';
+
+  var keys = Object.keys(TEAMS);
+  for (var ki = 0; ki < keys.length; ki++) {
+    var key = keys[ki];
+    var team = TEAMS[key];
+    var players = gd[key];
+    var total = teamTotal(key);
+
+    var card = document.createElement('div');
     card.className = 'scorecard';
-    card.style.borderTop = `3px solid ${team.color}`;
+    card.style.borderTop = '3px solid ' + team.color;
 
     // Header
-    const header = document.createElement('div');
-    header.className = 'sc-header';
-    header.style.background = `linear-gradient(135deg,${team.color}18 0%,transparent 100%)`;
-    header.innerHTML = `
-      <img src="${team.img}" alt="${team.name}" style="border-color:${team.color}55;">
-      <div class="sc-title">
-        <div class="sc-name" style="color:${team.color}">${team.name}</div>
-        <div class="sc-sub">6 players · $100 buy-in</div>
-      </div>
-      <div class="sc-big-score ${scoreClass(total)}">${fmt(total)}</div>
-    `;
-    card.appendChild(header);
+    var hdr = document.createElement('div');
+    hdr.className = 'sc-hdr';
+    hdr.innerHTML =
+      '<img src="' + team.img + '" alt="' + team.name + '">' +
+      '<div class="sc-title">' +
+        '<div class="sc-name">' + team.name + '</div>' +
+        '<div class="sc-sub">6 players &middot; $100 buy-in</div>' +
+      '</div>' +
+      '<div class="sc-big' + (total < 0 ? ' s-under' : '') + '">' + fmtPlain(total) + '</div>';
+    card.appendChild(hdr);
 
     // Table
-    const table = document.createElement('table');
-    table.className = 'sc-table';
-    table.innerHTML = `
-      <thead>
-        <tr>
-          <th>Player</th>
-          <th>R1</th><th>R2</th><th>R3</th><th>R4</th>
-          <th>Total</th><th>MC</th>
-        </tr>
-      </thead>
-    `;
-    const tbody = document.createElement('tbody');
+    var tbl = document.createElement('table');
+    tbl.className = 'sc-tbl';
+    tbl.innerHTML =
+      '<thead><tr>' +
+        '<th>Player</th>' +
+        '<th>R1</th><th>R2</th><th>R3</th><th>R4</th>' +
+        '<th>Total</th>' +
+      '</tr></thead>';
+    var tbody = document.createElement('tbody');
 
-    players.forEach((player, pi) => {
-      const tr = document.createElement('tr');
-      if (player.cutMissed) tr.classList.add('cut-row');
+    for (var pi = 0; pi < players.length; pi++) {
+      var p = players[pi];
+      var tr = document.createElement('tr');
+      if (p.cutMissed) tr.className = 'cut-row';
 
-      const ptotal = playerTotal(player);
-
-      const roundCells = [0,1,2,3].map(r => {
-        const isMcAuto = player.cutMissed && r >= 2;
-        const score = roundScore(player, r);
-        const cls = isMcAuto ? 'mc-score' : scoreClass(score);
-        const display = isMcAuto ? '+5' : fmt(score);
-        const disabled = isMcAuto ? 'disabled' : '';
-
-        return `<td><span
-            class="score-chip ${cls} ${disabled}"
-            data-team="${key}" data-player="${pi}" data-round="${r}"
-            ${!isMcAuto ? `onclick="startEdit(this)"` : ''}
-          >${display}</span></td>`;
-      }).join('');
-
-      tr.innerHTML = `
-        <td>${player.name}</td>
-        ${roundCells}
-        <td class="${scoreClass(ptotal)}" style="font-weight:700">${fmt(ptotal)}</td>
-        <td><button class="mc-btn${player.cutMissed ? ' active' : ''}"
-          onclick="toggleCut('${key}',${pi})">${player.cutMissed ? '✓ MC' : 'MC'}</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    // Total row
-    const totalRow = document.createElement('tr');
-    totalRow.className = 'sc-total-row';
-    const roundTotals = [0,1,2,3].map(r => {
-      const rt = teamRoundTotal(key, r);
-      return `<td class="${scoreClass(rt)}">${fmt(rt)}</td>`;
-    }).join('');
-    totalRow.innerHTML = `
-      <td style="color:var(--muted);">Team Total</td>
-      ${roundTotals}
-      <td class="${scoreClass(total)}">${fmt(total)}</td>
-      <td></td>
-    `;
-    tbody.appendChild(totalRow);
-
-    table.appendChild(tbody);
-    card.appendChild(table);
-    container.appendChild(card);
-  }
-}
-
-// ────────────────────────────────────────────
-//  SCORE EDITING
-// ────────────────────────────────────────────
-function startEdit(el) {
-  const key = el.dataset.team;
-  const pi  = parseInt(el.dataset.player);
-  const r   = parseInt(el.dataset.round);
-  const player = gameData[key][pi];
-  if (player.cutMissed && r >= 2) return;
-
-  el.contentEditable = 'true';
-  el.focus();
-
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  const sel = window.getSelection();
-  sel.removeAllRanges();
-  sel.addRange(range);
-
-  function finish() {
-    el.contentEditable = 'false';
-    const raw = el.textContent.trim().replace(/\s/g,'');
-    let val = null;
-    if (raw !== '' && raw !== '—' && raw !== '-') {
-      if (raw.toLowerCase() === 'e') {
-        val = 0;
-      } else {
-        const n = parseInt(raw.replace('+',''));
-        if (!isNaN(n)) val = n;
+      var pTotal = playerTotal(p);
+      var rCells = '';
+      for (var r = 0; r < 4; r++) {
+        var mcAuto = p.cutMissed && r >= 2;
+        var sc = roundScore(p, r);
+        var cls = mcAuto ? 's-mc' : scoreClass(sc);
+        var disp = mcAuto ? '+5' : fmtPlain(sc);
+        rCells += '<td><span class="chip ' + cls + '">' + disp + '</span></td>';
       }
+
+      tr.innerHTML =
+        '<td>' + p.name + '</td>' +
+        rCells +
+        '<td class="' + scoreClass(pTotal) + '" style="font-weight:800">' + fmtPlain(pTotal) + '</td>';
+
+      tbody.appendChild(tr);
     }
-    player.scores[r] = val;
-    saveData();
+
+    // Team total row
+    var totRow = document.createElement('tr');
+    totRow.className = 'sc-tot-row';
+    var rTots = '';
+    for (var r = 0; r < 4; r++) {
+      var rt = teamRoundTotal(key, r);
+      rTots += '<td class="' + scoreClass(rt) + '">' + fmtPlain(rt) + '</td>';
+    }
+    totRow.innerHTML =
+      '<td style="color:#666">Team Total</td>' +
+      rTots +
+      '<td class="' + scoreClass(total) + '">' + fmtPlain(total) + '</td>';
+    tbody.appendChild(totRow);
+
+    tbl.appendChild(tbody);
+    card.appendChild(tbl);
+    el.appendChild(card);
   }
-
-  el.addEventListener('blur', finish, { once: true });
-  el.addEventListener('keydown', function handler(e) {
-    if (e.key === 'Enter') { e.preventDefault(); el.blur(); }
-    if (e.key === 'Escape') {
-      el.removeEventListener('blur', finish);
-      el.contentEditable = 'false';
-      el.textContent = fmt(player.scores[r]);
-      el.removeEventListener('keydown', handler);
-    }
-  });
 }
 
-function toggleCut(key, pi) {
-  gameData[key][pi].cutMissed = !gameData[key][pi].cutMissed;
-  saveData();
-}
+// ── CHART ──
+var chart = null;
+var circles = {};
 
-// ────────────────────────────────────────────
-//  CHART
-// ────────────────────────────────────────────
-let chart = null;
-const pointCanvases = {};
-
-function makeCircle(src, size = 44) {
-  return new Promise(resolve => {
-    const img = new Image();
-    img.onload = () => {
-      const c = document.createElement('canvas');
+function makeCircle(src, size) {
+  return new Promise(function(resolve) {
+    var img = new Image();
+    img.onload = function() {
+      var c = document.createElement('canvas');
       c.width = c.height = size;
-      const ctx = c.getContext('2d');
+      var ctx = c.getContext('2d');
       ctx.beginPath();
-      ctx.arc(size/2, size/2, size/2, 0, Math.PI*2);
+      ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
       ctx.clip();
       ctx.drawImage(img, 0, 0, size, size);
       resolve(c);
     };
-    img.onerror = () => resolve(null);
+    img.onerror = function() { resolve(null); };
     img.src = src;
   });
 }
 
-function chartDatasets() {
-  return Object.entries(TEAMS).map(([key, team]) => {
-    // Data: [0 at start, cumulative after R1, R2, R3, R4]
-    const data = [0];
-    for (let r = 0; r < 4; r++) {
-      if (isRoundStarted(r)) {
-        data.push(teamCumulative(key, r));
-      } else {
-        data.push(null);
+function chartLabels() {
+  var h = gd.history || [];
+  if (h.length === 0) return ['Start', 'R1', 'R2', 'R3', 'R4'];
+  return ['Start'].concat(h.map(function(s) { return s.label; }));
+}
+
+function buildDatasets() {
+  var h = gd.history || [];
+  var useHistory = h.length > 0;
+  var keys = Object.keys(TEAMS);
+  return keys.map(function(key) {
+    var team = TEAMS[key];
+    var data;
+    if (useHistory) {
+      data = [0].concat(h.map(function(s) {
+        return s.scores[key] !== undefined ? s.scores[key] : 0;
+      }));
+    } else {
+      data = [0];
+      for (var r = 0; r < 4; r++) {
+        data.push(isRoundStarted(r) ? teamCumulative(key, r) : null);
       }
     }
     return {
       label: team.name,
-      data,
+      data: data,
       borderColor: team.color,
-      backgroundColor: team.color + '22',
+      backgroundColor: team.color + '18',
       borderWidth: 2.5,
-      pointStyle: pointCanvases[key] || 'circle',
-      pointRadius: 22,
-      pointHoverRadius: 25,
+      pointStyle: useHistory ? 'circle' : (circles[key] || 'circle'),
+      pointRadius: useHistory ? 6 : 22,
+      pointHoverRadius: useHistory ? 9 : 25,
       tension: 0.35,
-      spanGaps: false,
+      spanGaps: false
     };
   });
 }
 
-async function initChart() {
-  const [j, t, k] = await Promise.all([
+function initChart() {
+  Promise.all([
     makeCircle('jordan.png', 44),
-    makeCircle('tobi.png',   44),
-    makeCircle('kean.png',   44),
-  ]);
-  pointCanvases.jordan = j;
-  pointCanvases.tobi   = t;
-  pointCanvases.kean   = k;
+    makeCircle('tobi.png', 44),
+    makeCircle('kean.png', 44)
+  ]).then(function(results) {
+    circles.jordan = results[0];
+    circles.tobi = results[1];
+    circles.kean = results[2];
 
-  const ctx = document.getElementById('scoreChart').getContext('2d');
-  chart = new Chart(ctx, {
-    type: 'line',
-    data: {
-      labels: ['Start','R1','R2','R3','R4'],
-      datasets: chartDatasets(),
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      interaction: { intersect: false, mode: 'index' },
-      plugins: {
-        legend: {
-          labels: {
-            color: '#eef4f0',
-            font: { family: 'Inter', size: 13, weight: '500' },
-            usePointStyle: true,
-            pointStyleWidth: 18,
-            padding: 20,
+    var ctx = document.getElementById('scoreChart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'line',
+      data: { labels: chartLabels(), datasets: buildDatasets() },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#eef4f0',
+              font: { family: 'Inter', size: 13, weight: '600' },
+              usePointStyle: true,
+              pointStyleWidth: 18,
+              padding: 20
+            }
+          },
+          tooltip: {
+            backgroundColor: 'rgba(8,20,12,.96)',
+            borderColor: '#CBA135',
+            borderWidth: 1,
+            titleColor: '#CBA135',
+            bodyColor: '#eef4f0',
+            padding: 12,
+            callbacks: {
+              label: function(c) {
+                var v = c.parsed.y;
+                if (v === null) return null;
+                return '  ' + c.dataset.label + ': ' + (v === 0 ? 'E' : v > 0 ? '+' + v : '' + v);
+              }
+            }
           }
         },
-        tooltip: {
-          backgroundColor: 'rgba(10,18,13,0.95)',
-          borderColor: '#CBA135',
-          borderWidth: 1,
-          titleColor: '#CBA135',
-          bodyColor: '#eef4f0',
-          padding: 12,
-          callbacks: {
-            label: ctx => {
-              const v = ctx.parsed.y;
-              if (v === null) return null;
-              const s = v === 0 ? 'E' : v > 0 ? `+${v}` : `${v}`;
-              return `  ${ctx.dataset.label}: ${s}`;
+        scales: {
+          x: {
+            grid: { color: 'rgba(255,255,255,.05)' },
+            ticks: { color: '#6a9e7a', font: { family: 'Inter', size: 11 }, padding: 8, maxRotation: 45, minRotation: 0 }
+          },
+          y: {
+            grid: { color: 'rgba(255,255,255,.05)' },
+            ticks: {
+              color: '#6a9e7a',
+              font: { family: 'Inter', size: 12 },
+              callback: function(v) { return v === 0 ? 'E' : v > 0 ? '+' + v : '' + v; },
+              padding: 8
+            },
+            title: {
+              display: true,
+              text: 'Cumulative Score to Par (lower = better)',
+              color: '#4a7e5a',
+              font: { family: 'Inter', size: 11 }
             }
           }
         }
-      },
-      scales: {
-        x: {
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: { color: '#7da88a', font: { family: 'Inter', size: 12 }, padding: 8 },
-        },
-        y: {
-          grid: { color: 'rgba(255,255,255,0.05)' },
-          ticks: {
-            color: '#7da88a',
-            font: { family: 'Inter', size: 12 },
-            callback: v => v === 0 ? 'E' : v > 0 ? `+${v}` : `${v}`,
-            padding: 8,
-          },
-          title: {
-            display: true,
-            text: 'Total Score to Par (lower = better)',
-            color: '#7da88a',
-            font: { family: 'Inter', size: 11 },
-          }
-        }
       }
-    }
+    });
   });
 }
 
 function updateChart() {
   if (!chart) return;
-  chart.data.datasets = chartDatasets();
+  chart.data.labels = chartLabels();
+  chart.data.datasets = buildDatasets();
   chart.update();
 }
 
-// ────────────────────────────────────────────
-//  RENDER ALL
-// ────────────────────────────────────────────
 function renderAll() {
-  renderLeaderboard();
-  renderScorecards();
+  renderLB();
+  renderSC();
   updateChart();
 }
 
-// ────────────────────────────────────────────
-//  INIT
-// ────────────────────────────────────────────
+// ── LIVE DATA ──
+var ESPNURL = 'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard';
+var liveTimer = null;
+var countdownTimer = null;
+var nextRefreshAt = null;
+
+function normName(s) {
+  return s.toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // strip accents
+    .replace(/[^a-z ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function setLiveDot(state) { // 'on' | 'off' | 'err'
+  var d = document.getElementById('liveDot');
+  if (!d) return;
+  d.className = 'live-dot' + (state === 'on' ? '' : state === 'err' ? ' err' : ' off');
+}
+
+function setLiveText(msg) {
+  var el = document.getElementById('liveText');
+  if (el) el.textContent = msg;
+}
+
+function parseRoundScore(ls) {
+  if (!ls) return null;
+  var v = ls.value;
+  if (v == null && ls.displayValue) {
+    var dv = ls.displayValue.trim();
+    if (dv === 'E' || dv === 'Even') return 0;
+    var n = parseInt(dv.replace('+', ''));
+    return isNaN(n) ? null : n;
+  }
+  if (v == null) return null;
+  // If > 40 it's a raw stroke count (Augusta par = 72); otherwise already to-par
+  return (Math.abs(v) > 40) ? (Math.round(v) - 72) : Math.round(v);
+}
+
+function applyCompetitors(competitors) {
+  // Build name → competitor lookup
+  var lookup = {};
+  for (var i = 0; i < competitors.length; i++) {
+    var c = competitors[i];
+    var dn = c.athlete && c.athlete.displayName;
+    if (dn) lookup[normName(dn)] = c;
+  }
+
+  var found = 0, total = 0;
+  var unmatched = [];
+  var seen = {};
+  var keys = Object.keys(TEAMS);
+  for (var ki = 0; ki < keys.length; ki++) {
+    var ps = gd[keys[ki]];
+    for (var pi = 0; pi < ps.length; pi++) {
+      total++;
+      var comp = lookup[normName(ps[pi].name)];
+      if (!comp) {
+        if (!seen[ps[pi].name]) { unmatched.push(ps[pi].name); seen[ps[pi].name] = true; }
+        continue;
+      }
+      found++;
+
+      // Per-round scores
+      var ls = comp.linescores || [];
+      for (var r = 0; r < 4; r++) {
+        var val = parseRoundScore(ls[r]);
+        ps[pi].scores[r] = val;
+      }
+
+      // Missed cut / WD / DQ
+      var sname = comp.status && comp.status.type && comp.status.type.name || '';
+      ps[pi].cutMissed = (sname === 'STATUS_CUT' || sname === 'STATUS_WD' || sname === 'STATUS_DQ');
+    }
+  }
+  return { found: found, total: total, unmatched: unmatched };
+}
+
+function startCountdown() {
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = setInterval(function() {
+    if (!nextRefreshAt) return;
+    var mins = Math.max(0, Math.round((nextRefreshAt - Date.now()) / 60000));
+    var el = document.getElementById('liveText');
+    if (el) {
+      el.textContent = el.textContent
+        .replace(/\u00b7 next refresh in [^\u00b7]*/i, '')
+        .trimEnd() + ' \u00b7 next refresh in ' + (mins > 0 ? mins + ' min' : 'soon\u2026');
+    }
+  }, 60000);
+}
+
+function fetchLive() {
+  setLiveDot('off');
+  setLiveText('Fetching live scores\u2026');
+
+  fetch(ESPNURL)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      var events = data.events || [];
+      if (!events.length) {
+        setLiveDot('off');
+        setLiveText('No active PGA Tour event found \u00b7 Manual entry active');
+        return;
+      }
+
+      var evt = events[0];
+      var evtName = evt.name || 'PGA Tour';
+      var competition = evt.competitions && evt.competitions[0];
+      var competitors = (competition && competition.competitors) || [];
+
+      if (!competitors.length) {
+        setLiveDot('off');
+        setLiveText(evtName + ' \u00b7 Waiting for scores to post');
+        return;
+      }
+
+      var result = applyCompetitors(competitors);
+      addSnapshot();
+      localStorage.setItem('masters2026bet', JSON.stringify(gd));
+      liveActive = true;
+      renderAll();
+
+      var timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      document.getElementById('lastUpd').textContent =
+        'Live data \u00b7 ' + evtName + ' \u00b7 Updated ' + timeStr;
+
+      nextRefreshAt = Date.now() + 3600000;
+      setLiveDot(result.unmatched.length ? 'err' : 'on');
+      var statusMsg = result.found + '/' + result.total + ' players matched \u00b7 next refresh in 60 min';
+      if (result.unmatched.length) {
+        statusMsg += ' \u00b7 No ESPN data for: ' + result.unmatched.join(', ');
+      }
+      setLiveText(statusMsg);
+      startCountdown();
+
+      // Schedule next hourly refresh
+      if (liveTimer) clearTimeout(liveTimer);
+      liveTimer = setTimeout(fetchLive, 3600000);
+    })
+    .catch(function(err) {
+      console.error('Live fetch error:', err);
+      setLiveDot('err');
+      var timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      setLiveText('Fetch failed at ' + timeStr + ' \u00b7 Manual scores active \u00b7 Retrying in 5 min');
+      // Retry in 5 minutes on error
+      if (liveTimer) clearTimeout(liveTimer);
+      liveTimer = setTimeout(fetchLive, 300000);
+    });
+}
+
 renderAll();
-updateTimestamp();
+updateStamp();
 initChart();
+// Kick off live data immediately on page load
+fetchLive();
 </script>
 </body>
 </html>
