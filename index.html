@@ -650,6 +650,7 @@ function buildDatasets() {
     var data;
     if (h.length > 0) {
       // Historical snapshots + current live value appended
+      // Historical snapshots + current live value appended
       data = [0].concat(h.map(function(s) {
         return s.scores[key] !== undefined ? s.scores[key] : 0;
       })).concat([currentScore]);
@@ -722,6 +723,7 @@ function initChart() {
             ticks: { color: '#6a9e7a', font: { family: 'Inter', size: 11 }, padding: 8, maxRotation: 45, minRotation: 0 }
           },
           y: {
+            reverse: true,
             grid: { color: 'rgba(255,255,255,.05)' },
             ticks: {
               color: '#6a9e7a',
