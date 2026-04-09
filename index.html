@@ -1009,19 +1009,22 @@ function parseRoundScore(ls) {
   if (!ls) return null;
   // ESPN uses value=0 + displayValue="-" as a placeholder for rounds not yet played
   if (ls.displayValue && ls.displayValue.trim() === '-') return null;
-  var v = ls.value;
-  if (v == null && ls.displayValue) {
+  // displayValue is always to-par formatted ("+1", "E", "-3") — prefer it over value,
+  // which can be raw stroke count for in-progress rounds (e.g. value=5 for a bogey on hole 1)
+  if (ls.displayValue) {
     var dv = ls.displayValue.trim();
     if (dv === 'E' || dv === 'Even') return 0;
     var n = parseInt(dv.replace('+', ''));
-    return isNaN(n) ? null : n;
+    if (!isNaN(n)) return n;
   }
+  var v = ls.value;
   if (v == null) return null;
   // If > 40 it's a raw stroke count (Augusta par = 72); otherwise already to-par
   return (Math.abs(v) > 40) ? (Math.round(v) - 72) : Math.round(v);
 }
 
-function applyCompetitors(competitors) {
+function applyCompetitors(competitors, activeRound) {
+  activeRound = activeRound || 0;
   // Build name → competitor lookup
   var lookup = {};
   for (var i = 0; i < competitors.length; i++) {
@@ -1045,11 +1048,33 @@ function applyCompetitors(competitors) {
       }
       found++;
 
-      // Per-round scores
+      // Per-round scores and hole-by-hole
+      // ESPN sends per-hole linescores for in-progress rounds:
+      //   ls[h].value  = raw strokes on that hole (e.g. 5 for bogey on par-4)
+      //   ls[h].displayValue = hole to-par ("+1", "E", "-1", or "-" if not played)
+      // When ls.length >= 18 we treat it as per-hole data for the active round.
       var ls = comp.linescores || [];
-      for (var r = 0; r < 4; r++) {
-        var val = parseRoundScore(ls[r]);
-        ps[pi].scores[r] = val;
+      if (ls.length >= 18) {
+        // Per-hole format — each entry is one hole of the active round
+        var roundSum = 0, hasData = false;
+        for (var h = 0; h < 18; h++) {
+          var hls = ls[h];
+          if (!hls || (hls.displayValue && hls.displayValue.trim() === '-')) continue;
+          var strokes = (hls.value != null && hls.value >= 1 && hls.value <= 15) ? Math.round(hls.value) : null;
+          var holePar = parseRoundScore(hls); // to-par for this hole via displayValue
+          if (strokes !== null) {
+            ps[pi].holeScores[activeRound][h] = strokes;
+            hasData = true;
+          }
+          if (holePar !== null) roundSum += holePar;
+        }
+        ps[pi].scores[activeRound] = hasData ? roundSum : null;
+      } else {
+        // Per-round summary format (≤ 4 entries — one per round)
+        for (var r = 0; r < 4; r++) {
+          var val = parseRoundScore(ls[r]);
+          ps[pi].scores[r] = val;
+        }
       }
 
       // Missed cut / WD / DQ
