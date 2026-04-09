@@ -232,6 +232,15 @@
     .refresh-btn:hover { border-color:var(--gold); color:var(--gold); }
 
     footer { text-align:center; padding:1.5rem; font-size:.67rem; letter-spacing:2px; text-transform:uppercase; color:#2a4a35; }
+
+    /* ── TEE TIME BADGE ── */
+    .tee-badge {
+      display:inline-block; margin-left:.45rem;
+      font-size:.58rem; font-weight:600; letter-spacing:.4px;
+      color:#005a36; background:#d6edd8; border:1px solid #9ecfa8;
+      border-radius:3px; padding:.1rem .35rem;
+      vertical-align:middle; white-space:nowrap;
+    }
   </style>
 </head>
 <body>
@@ -307,7 +316,7 @@ var TEAMS = {
 
 // ── DATA ──
 function makeDefault() {
-  var d = { history: [] };
+  var d = { history: [], teeTimes: {} };
   var keys = Object.keys(TEAMS);
   for (var i = 0; i < keys.length; i++) {
     var k = keys[i];
@@ -353,6 +362,7 @@ function updateStamp() {
 
 var gd = loadData();
 if (!gd.history) gd.history = [];
+if (!gd.teeTimes) gd.teeTimes = {};
 
 // Sync rosters: rebuild each team from TEAMS, preserving scores for returning players
 (function() {
@@ -376,6 +386,16 @@ if (!gd.history) gd.history = [];
   localStorage.setItem('masters2026bet', JSON.stringify(gd));
 })();
 var liveActive = false;
+
+function hasTeedOff(player, r) {
+  if (player.scores[r] !== null) return true;
+  if (player.holeScores && player.holeScores[r]) {
+    for (var h = 0; h < 18; h++) {
+      if (player.holeScores[r][h] !== null) return true;
+    }
+  }
+  return false;
+}
 
 // ── SCORECARD VIEW STATE ──
 var scView = '18hole'; // '18hole' | 'rounds'
@@ -665,10 +685,15 @@ function renderSC18(card, team, players, key) {
       backCells += '<td>' + inner + '</td>';
     }
 
+    var teeBadge18 = '';
+    if (!p.cutMissed && !hasTeedOff(p, r) && gd.teeTimes[p.name]) {
+      teeBadge18 = '<span class="tee-badge">' + gd.teeTimes[p.name] + '</span>';
+    }
+
     var tr = document.createElement('tr');
     if (p.cutMissed) tr.style.opacity = '0.6';
     tr.innerHTML =
-      '<td class="td-player">' + p.name + '</td>' +
+      '<td class="td-player">' + p.name + teeBadge18 + '</td>' +
       frontCells +
       '<td class="td-sub">' + frontDisp + '</td>' +
       backCells +
@@ -712,6 +737,7 @@ function renderSC18(card, team, players, key) {
 
 function renderSCRounds(card, team, players, key) {
   var total = teamTotal(key);
+  var curRound = autoDetectRound();
   var tbl = document.createElement('table');
   tbl.className = 'sc-tbl';
   tbl.innerHTML =
@@ -736,8 +762,14 @@ function renderSCRounds(card, team, players, key) {
       var disp = mcAuto ? '+5' : fmtPlain(sc);
       rCells += '<td><span class="chip ' + cls + '">' + disp + '</span></td>';
     }
+
+    var teeBadge = '';
+    if (!p.cutMissed && !hasTeedOff(p, curRound) && gd.teeTimes[p.name]) {
+      teeBadge = '<span class="tee-badge">' + gd.teeTimes[p.name] + '</span>';
+    }
+
     tr.innerHTML =
-      '<td>' + p.name + '</td>' +
+      '<td>' + p.name + teeBadge + '</td>' +
       rCells +
       '<td class="' + scoreClass(pTotal) + '" style="font-weight:800">' + fmtPlain(pTotal) + '</td>';
     tbody.appendChild(tr);
@@ -975,6 +1007,8 @@ function setLiveText(msg) {
 
 function parseRoundScore(ls) {
   if (!ls) return null;
+  // ESPN uses value=0 + displayValue="-" as a placeholder for rounds not yet played
+  if (ls.displayValue && ls.displayValue.trim() === '-') return null;
   var v = ls.value;
   if (v == null && ls.displayValue) {
     var dv = ls.displayValue.trim();
@@ -1021,6 +1055,35 @@ function applyCompetitors(competitors) {
       // Missed cut / WD / DQ
       var sname = comp.status && comp.status.type && comp.status.type.name || '';
       ps[pi].cutMissed = (sname === 'STATUS_CUT' || sname === 'STATUS_WD' || sname === 'STATUS_DQ');
+
+      // Tee time — try ISO string first (normalize missing seconds), fall back to status.detail ET→PT
+      var storedTee = null;
+      var rawTee = comp.teeTime || (comp.status && comp.status.teeTime);
+      if (rawTee) {
+        try {
+          // ESPN omits seconds: "2026-04-09T14:07Z" → normalize to "2026-04-09T14:07:00Z"
+          var normalized = String(rawTee).replace(/T(\d{2}:\d{2})Z$/, 'T$1:00Z');
+          var td = new Date(normalized);
+          if (!isNaN(td.getTime())) {
+            storedTee = td.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Los_Angeles' }) + ' PT';
+          }
+        } catch(e) {}
+      }
+      // Fallback: parse status.detail like "10:07 AM ET" and subtract 3 hrs for PT
+      if (!storedTee && comp.status && comp.status.detail) {
+        var m = comp.status.detail.match(/(\d+):(\d+)\s*(AM|PM)\s*ET/i);
+        if (m) {
+          var hh = parseInt(m[1]), mm = parseInt(m[2]), ampm = m[3].toUpperCase();
+          if (ampm === 'PM' && hh !== 12) hh += 12;
+          if (ampm === 'AM' && hh === 12) hh = 0;
+          hh -= 3; // ET → PT (both on daylight time in April)
+          if (hh < 0) hh += 24;
+          var ptAmPm = hh < 12 ? 'AM' : 'PM';
+          var ptH = hh % 12 || 12;
+          storedTee = ptH + ':' + (mm < 10 ? '0' : '') + mm + ' ' + ptAmPm + ' PT';
+        }
+      }
+      if (storedTee) gd.teeTimes[ps[pi].name] = storedTee;
     }
   }
   return { found: found, total: total, unmatched: unmatched };
