@@ -157,65 +157,6 @@
     .chip { display:inline-block; min-width:28px; padding:.12rem .25rem; border-radius:3px; font-weight:700; }
     .sc-tot-row td { background:var(--cream2) !important; border-top:2px solid var(--ink) !important; font-weight:800; font-size:.82rem; }
 
-    /* ── SCORECARD TOGGLE ── */
-    .sc-toggle-bar {
-      display:flex; align-items:center; justify-content:center; gap:.5rem; margin-bottom:1rem; flex-wrap:wrap;
-    }
-    .sc-toggle-btn {
-      background:transparent; border:1px solid var(--border-dk); color:var(--muted-dk);
-      font-family:'Inter',sans-serif; font-size:.68rem; font-weight:700; letter-spacing:1px;
-      text-transform:uppercase; padding:.38rem 1.1rem; border-radius:3px; cursor:pointer; transition:all .15s;
-    }
-    .sc-toggle-btn.active { background:var(--green); border-color:var(--green); color:var(--cream); }
-    .sc-toggle-btn:hover:not(.active) { border-color:var(--gold); color:var(--gold); }
-    .sc-round-pill {
-      background:transparent; border:1px solid var(--border-dk); color:var(--muted-dk);
-      font-family:'Inter',sans-serif; font-size:.65rem; font-weight:700; letter-spacing:.8px;
-      text-transform:uppercase; padding:.3rem .75rem; border-radius:20px; cursor:pointer; transition:all .15s;
-    }
-    .sc-round-pill.active { background:var(--gold); border-color:var(--gold); color:#1a1a1a; }
-    .sc-round-pill:hover:not(.active) { border-color:var(--muted-dk); color:var(--txt-lt); }
-    .sc-round-sep { color:var(--muted-dk); font-size:.7rem; margin:0 .25rem; }
-
-    /* 18-hole table */
-    .sc-18-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .sc-18-tbl { width:100%; min-width:720px; border-collapse:collapse; }
-    .sc-18-tbl thead tr { background:var(--cream2); }
-    .sc-18-tbl thead tr.h-par-row { background:#e8e4d8; border-bottom:2px solid var(--ink); }
-    .sc-18-tbl th {
-      padding:.3rem .2rem; font-size:.57rem; font-weight:800; letter-spacing:1px;
-      text-transform:uppercase; color:var(--ink); text-align:center; border-bottom:1px solid #ccc;
-    }
-    .sc-18-tbl th.h-player { text-align:left; padding-left:.8rem; min-width:115px; border-bottom:none; }
-    .sc-18-tbl th.h-sub { background:#e8e4d8; color:#555; font-size:.55rem; }
-    .sc-18-tbl th.h-tot { background:#ddd8c8; }
-    .sc-18-tbl td {
-      padding:.38rem .2rem; font-size:.72rem; text-align:center;
-      color:var(--ink); font-weight:500; border-bottom:1px solid var(--cream3);
-    }
-    .sc-18-tbl td.td-player {
-      text-align:left; padding-left:.8rem; font-weight:700; font-size:.7rem;
-      max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-    }
-    .sc-18-tbl td.td-sub { background:#f0ecdc !important; font-weight:800; }
-    .sc-18-tbl td.td-tot { background:#e8e4d8 !important; font-weight:800; }
-    .sc-18-tbl tbody tr:nth-child(even) td { background:#FAF7EE; }
-    .sc-18-tbl tbody tr:nth-child(even) td.td-sub { background:#e8e4d0 !important; }
-    .sc-18-tbl tbody tr:nth-child(even) td.td-tot { background:#e0dcc8 !important; }
-    .sc-18-tbl .sc-tot-row-18 td {
-      background:var(--cream2) !important; border-top:2px solid var(--ink) !important;
-      font-weight:800; font-size:.72rem;
-    }
-    .sc-18-tbl .sc-tot-row-18 td.td-sub { background:#ddd8c8 !important; }
-    .sc-18-tbl .sc-tot-row-18 td.td-tot { background:#d4d0c0 !important; }
-
-    /* Hole score cell coloring */
-    .hs-eagle  { background:#CBA135 !important; color:#1a1a1a !important; font-weight:900 !important; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; }
-    .hs-birdie { background:#CC0000 !important; color:#fff !important; font-weight:800 !important; border-radius:50%; width:22px; height:22px; display:inline-flex; align-items:center; justify-content:center; }
-    .hs-bogey  { color:#1d4ed8 !important; font-weight:700 !important; }
-    .hs-double { color:#7c3aed !important; font-weight:800 !important; }
-    .hs-par    { color:var(--ink); }
-    .hs-dash   { color:#bbb; font-weight:400; }
 
     /* ── CHART ── */
     .chart-panel { background:var(--card-dk); border:1px solid var(--border-dk); border-radius:6px; padding:1.5rem 1.5rem 1.25rem; box-shadow:0 8px 32px rgba(0,0,0,.5); }
@@ -280,7 +221,6 @@
   </div>
 
   <div class="sec-lbl"><span>Team Scorecards</span></div>
-  <div class="sc-toggle-bar" id="sc-toggle-bar"></div>
   <div class="sc-grid" id="sc-grid"></div>
 
   <div class="sec-lbl"><span>Score Tracker</span></div>
@@ -397,13 +337,6 @@ function hasTeedOff(player, r) {
   return false;
 }
 
-// ── SCORECARD VIEW STATE ──
-var scView = '18hole'; // '18hole' | 'rounds'
-var scRound = 0;       // which round to show in 18-hole view (0-3)
-
-var HOLE_PARS = [4,5,4,3,4,3,4,5,4, 4,4,3,5,4,5,3,4,4]; // Augusta National
-var FRONT_PAR = HOLE_PARS.slice(0,9).reduce(function(a,b){return a+b;},0);
-var BACK_PAR  = HOLE_PARS.slice(9).reduce(function(a,b){return a+b;},0);
 
 function autoDetectRound() {
   // Return the highest round index that has any data
@@ -563,177 +496,6 @@ function renderLB() {
 
 // ── SCORECARDS ──
 
-function renderSCToggle() {
-  var bar = document.getElementById('sc-toggle-bar');
-  if (!bar) return;
-
-  // Detect current round for label
-  var curR = autoDetectRound();
-
-  var roundPills = '';
-  for (var r = 0; r < 4; r++) {
-    var active = (scView === '18hole' && scRound === r) ? ' active' : '';
-    roundPills +=
-      '<button class="sc-round-pill' + active + '" onclick="setSCRound(' + r + ')">R' + (r+1) + '</button>';
-  }
-
-  bar.innerHTML =
-    '<button class="sc-toggle-btn' + (scView === '18hole' ? ' active' : '') + '" onclick="setSCView(\'18hole\')">18-Hole View</button>' +
-    '<button class="sc-toggle-btn' + (scView === 'rounds' ? ' active' : '') + '" onclick="setSCView(\'rounds\')">Round Summary</button>' +
-    (scView === '18hole'
-      ? '<span class="sc-round-sep">|</span>' + roundPills
-      : '');
-}
-
-function setSCView(v) {
-  scView = v;
-  if (v === '18hole') scRound = autoDetectRound();
-  renderSCToggle();
-  renderSC();
-}
-
-function setSCRound(r) {
-  scView = '18hole';
-  scRound = r;
-  renderSCToggle();
-  renderSC();
-}
-
-function holeClass(strokes, par) {
-  if (strokes === null) return 'hs-dash';
-  var diff = strokes - par;
-  if (diff <= -2) return 'hs-eagle';
-  if (diff === -1) return 'hs-birdie';
-  if (diff === 0)  return 'hs-par';
-  if (diff === 1)  return 'hs-bogey';
-  return 'hs-double';
-}
-
-
-function renderSC18(card, team, players, key) {
-  var r = scRound;
-  var rLabel = 'Round ' + (r + 1);
-
-  // Build header row: Player | H1..H9 | OUT | H10..H18 | IN | TOTAL
-  var holeHdrs = '';
-  for (var h = 0; h < 9; h++)  holeHdrs += '<th class="h-score">' + (h+1) + '</th>';
-  holeHdrs += '<th class="h-sub">Out</th>';
-  for (var h = 9; h < 18; h++) holeHdrs += '<th class="h-score">' + (h+1) + '</th>';
-  holeHdrs += '<th class="h-sub">In</th><th class="h-tot">Total</th>';
-
-  // Par row
-  var parCells = '';
-  for (var h = 0; h < 9; h++)  parCells += '<th class="h-score" style="color:#555;font-weight:600">' + HOLE_PARS[h] + '</th>';
-  parCells += '<th class="h-sub">' + FRONT_PAR + '</th>';
-  for (var h = 9; h < 18; h++) parCells += '<th class="h-score" style="color:#555;font-weight:600">' + HOLE_PARS[h] + '</th>';
-  parCells += '<th class="h-sub">' + BACK_PAR + '</th><th class="h-tot">72</th>';
-
-  var wrap = document.createElement('div');
-  wrap.className = 'sc-18-wrap';
-
-  var tbl = document.createElement('table');
-  tbl.className = 'sc-18-tbl';
-  tbl.innerHTML =
-    '<thead>' +
-      '<tr><th class="h-player">Player &mdash; ' + rLabel + '</th>' + holeHdrs + '</tr>' +
-      '<tr class="h-par-row"><th class="h-player" style="color:#555;font-size:.56rem;font-weight:600">Par</th>' + parCells + '</tr>' +
-    '</thead>';
-
-  var tbody = document.createElement('tbody');
-
-  // Team subtotal accumulators
-  var teamFront = 0, teamBack = 0, teamHasData = false;
-  var teamHoleTotals = Array(18).fill(0);
-  var teamHoleHasData = Array(18).fill(false);
-
-  for (var pi = 0; pi < players.length; pi++) {
-    var p = players[pi];
-    var hs = (p.holeScores && p.holeScores[r]) ? p.holeScores[r] : Array(18).fill(null);
-
-    var frontStk = 0, backStk = 0, frontHas = false, backHas = false;
-
-    // Accumulate hole totals
-    for (var h = 0; h < 18; h++) {
-      var s = hs[h];
-      if (s !== null) {
-        teamHoleTotals[h] += s; teamHoleHasData[h] = true; teamHasData = true;
-        if (h < 9) { frontStk += s; frontHas = true; }
-        else        { backStk  += s; backHas  = true; }
-      }
-    }
-
-    var frontDisp = frontHas ? frontStk : '&mdash;';
-    var backDisp  = backHas  ? backStk  : '&mdash;';
-    var totalStk  = frontHas || backHas ? frontStk + backStk : null;
-    var totalPar  = totalStk !== null ? totalStk - 72 : null;
-
-    teamFront += frontHas ? frontStk : 0;
-    teamBack  += backHas  ? backStk  : 0;
-
-    var frontCells = '';
-    for (var h = 0; h < 9; h++) {
-      var s = hs[h];
-      var cls = holeClass(s, HOLE_PARS[h]);
-      var inner = s !== null ? '<span class="' + cls + '">' + s + '</span>' : '<span class="hs-dash">&mdash;</span>';
-      frontCells += '<td>' + inner + '</td>';
-    }
-    var backCells = '';
-    for (var h = 9; h < 18; h++) {
-      var s = hs[h];
-      var cls = holeClass(s, HOLE_PARS[h]);
-      var inner = s !== null ? '<span class="' + cls + '">' + s + '</span>' : '<span class="hs-dash">&mdash;</span>';
-      backCells += '<td>' + inner + '</td>';
-    }
-
-    var teeBadge18 = '';
-    if (!p.cutMissed && !hasTeedOff(p, r) && gd.teeTimes[p.name]) {
-      teeBadge18 = '<span class="tee-badge">' + gd.teeTimes[p.name] + '</span>';
-    }
-
-    var tr = document.createElement('tr');
-    if (p.cutMissed) tr.style.opacity = '0.6';
-    tr.innerHTML =
-      '<td class="td-player">' + p.name + teeBadge18 + '</td>' +
-      frontCells +
-      '<td class="td-sub">' + frontDisp + '</td>' +
-      backCells +
-      '<td class="td-sub">' + backDisp + '</td>' +
-      '<td class="td-tot ' + scoreClass(totalPar) + '">' + fmtPlain(totalPar) + '</td>';
-    tbody.appendChild(tr);
-  }
-
-  // Team total row
-  var teamFrontDisp = teamHasData ? teamFront : '&mdash;';
-  var teamBackDisp  = teamHasData ? teamBack  : '&mdash;';
-  var teamTotalStk  = teamHasData ? teamFront + teamBack : null;
-  var teamTotalPar  = teamTotalStk !== null ? teamTotalStk - (72 * players.length) : null;
-
-  var totFrontCells = '';
-  for (var h = 0; h < 9; h++) {
-    var v = teamHoleHasData[h] ? teamHoleTotals[h] : null;
-    totFrontCells += '<td class="td-sub">' + (v !== null ? v : '&mdash;') + '</td>';
-  }
-  var totBackCells = '';
-  for (var h = 9; h < 18; h++) {
-    var v = teamHoleHasData[h] ? teamHoleTotals[h] : null;
-    totBackCells += '<td class="td-sub">' + (v !== null ? v : '&mdash;') + '</td>';
-  }
-
-  var totRow = document.createElement('tr');
-  totRow.className = 'sc-tot-row-18';
-  totRow.innerHTML =
-    '<td class="td-player" style="color:#666">Team Total</td>' +
-    totFrontCells +
-    '<td class="td-sub">' + teamFrontDisp + '</td>' +
-    totBackCells +
-    '<td class="td-sub">' + teamBackDisp + '</td>' +
-    '<td class="td-tot ' + scoreClass(teamTotalPar) + '">' + fmtPlain(teamTotalPar) + '</td>';
-  tbody.appendChild(totRow);
-
-  tbl.appendChild(tbody);
-  wrap.appendChild(tbl);
-  card.appendChild(wrap);
-}
 
 function renderSCRounds(card, team, players, key) {
   var total = teamTotal(key);
@@ -796,13 +558,6 @@ function renderSC() {
   var el = document.getElementById('sc-grid');
   el.innerHTML = '';
 
-  // In 18-hole mode, stack cards vertically (full width)
-  if (scView === '18hole') {
-    el.style.gridTemplateColumns = '1fr';
-  } else {
-    el.style.gridTemplateColumns = '';
-  }
-
   var keys = Object.keys(TEAMS);
   for (var ki = 0; ki < keys.length; ki++) {
     var key = keys[ki];
@@ -825,11 +580,7 @@ function renderSC() {
       '<div class="sc-big' + (total < 0 ? ' s-under' : '') + '">' + fmtPlain(total) + '</div>';
     card.appendChild(hdr);
 
-    if (scView === '18hole') {
-      renderSC18(card, team, players, key);
-    } else {
-      renderSCRounds(card, team, players, key);
-    }
+    renderSCRounds(card, team, players, key);
 
     el.appendChild(card);
   }
@@ -859,26 +610,28 @@ function makeCircle(src, size) {
 
 function chartLabels() {
   var h = gd.history || [];
-  if (h.length === 0) return ['Start', 'R1', 'R2', 'R3', 'R4'];
-  return ['Start'].concat(h.map(function(s) { return s.label; }));
+  var now = new Date();
+  var liveLabel = activeRoundLabel() + ' \u00b7 Live';
+  if (h.length === 0) return ['Start', liveLabel];
+  // Always append a "Live" label for the current data point
+  return ['Start'].concat(h.map(function(s) { return s.label; })).concat([liveLabel]);
 }
 
 function buildDatasets() {
   var h = gd.history || [];
-  var useHistory = h.length > 0;
   var keys = Object.keys(TEAMS);
   return keys.map(function(key) {
     var team = TEAMS[key];
+    var currentScore = teamTotal(key);
     var data;
-    if (useHistory) {
+    if (h.length > 0) {
+      // Historical snapshots + current live value appended
       data = [0].concat(h.map(function(s) {
         return s.scores[key] !== undefined ? s.scores[key] : 0;
-      }));
+      })).concat([currentScore]);
     } else {
-      data = [0];
-      for (var r = 0; r < 4; r++) {
-        data.push(isRoundStarted(r) ? teamCumulative(key, r) : null);
-      }
+      // No history yet — just start + live
+      data = [0, currentScore];
     }
     return {
       label: team.name,
@@ -886,9 +639,9 @@ function buildDatasets() {
       borderColor: team.color,
       backgroundColor: team.color + '18',
       borderWidth: 2.5,
-      pointStyle: useHistory ? 'circle' : (circles[key] || 'circle'),
-      pointRadius: useHistory ? 6 : 22,
-      pointHoverRadius: useHistory ? 9 : 25,
+      pointStyle: 'circle',
+      pointRadius: 6,
+      pointHoverRadius: 9,
       tension: 0.35,
       spanGaps: false
     };
@@ -974,7 +727,6 @@ function updateChart() {
 
 function renderAll() {
   renderLB();
-  renderSCToggle();
   renderSC();
   updateChart();
 }
@@ -1156,7 +908,12 @@ function fetchLive() {
         return;
       }
 
-      var result = applyCompetitors(competitors);
+      // Determine active round (0-indexed) from competition status
+      var activeRound = 0;
+      if (competition.status && competition.status.period) {
+        activeRound = Math.max(0, Math.min(3, competition.status.period - 1));
+      }
+      var result = applyCompetitors(competitors, activeRound);
       addSnapshot();
       localStorage.setItem('masters2026bet', JSON.stringify(gd));
       liveActive = true;
