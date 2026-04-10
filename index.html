@@ -204,6 +204,7 @@
       <div class="bet-stat"><div class="bs-lbl">Buy-In</div><div class="bs-val">$100</div></div>
       <div class="bet-stat"><div class="bs-lbl">Format</div><div class="bs-val" style="font-size:.85rem;padding-top:3px;">Lowest Score to Par</div></div>
       <div class="bet-stat"><div class="bs-lbl">MC Penalty</div><div class="bs-val">+5 / Rd</div></div>
+      <div class="bet-stat"><div class="bs-lbl">Cut Line</div><div class="bs-val" id="cutLineVal">&mdash;</div></div>
     </div>
   </div>
 </header>
@@ -313,6 +314,20 @@ if (!gd.history) gd.history = [];
 if (!gd.teeTimes) gd.teeTimes = {};
 if (!gd.playerThru) gd.playerThru = {};
 
+// Migrate legacy flat teeTimes ({"Player Name": "7:48 AM PT"}) to per-round format ({0: {"Player Name": "..."}})
+// Flat keys are strings that are not numeric round indices
+(function() {
+  var needsMigration = false;
+  var keys = Object.keys(gd.teeTimes);
+  for (var i = 0; i < keys.length; i++) {
+    if (isNaN(parseInt(keys[i]))) { needsMigration = true; break; }
+  }
+  if (needsMigration) {
+    // Discard stale flat tee times — they'll be repopulated correctly on next fetchLive()
+    gd.teeTimes = {};
+  }
+})();
+
 // Sync rosters: rebuild each team from TEAMS, preserving scores for returning players
 (function() {
   var teamKeys = Object.keys(TEAMS);
@@ -335,6 +350,16 @@ if (!gd.playerThru) gd.playerThru = {};
   localStorage.setItem('masters2026bet', JSON.stringify(gd));
 })();
 var liveActive = false;
+var cutLineValue = null;
+
+function renderCutLine() {
+  var el = document.getElementById('cutLineVal');
+  if (!el) return;
+  if (cutLineValue === null) { el.innerHTML = '&mdash;'; return; }
+  var txt = cutLineValue === 0 ? 'E' : cutLineValue > 0 ? '+' + cutLineValue : '' + cutLineValue;
+  el.textContent = txt;
+  el.style.color = cutLineValue < 0 ? '#ff9090' : '';
+}
 
 function hasTeedOff(player, r) {
   if (player.scores[r] !== null) return true;
@@ -547,8 +572,16 @@ function renderSCRounds(card, team, players, key) {
 
     var teeBadge = '';
     if (!p.cutMissed) {
-      if (!hasTeedOff(p, curRound) && gd.teeTimes[p.name]) {
-        teeBadge = '<span class="tee-badge">' + gd.teeTimes[p.name] + '</span>';
+      // Find the first round the player has not yet teed off in
+      var nextRound = curRound;
+      for (var rr = 0; rr <= 3; rr++) {
+        if (!hasTeedOff(p, rr)) { nextRound = rr; break; }
+        if (rr === 3) nextRound = curRound; // all rounds done
+      }
+      var roundTeeTimes = (gd.teeTimes[nextRound] && typeof gd.teeTimes[nextRound] === 'object') ? gd.teeTimes[nextRound] : {};
+      var playerTeeTime = roundTeeTimes[p.name] || null;
+      if (!hasTeedOff(p, nextRound) && playerTeeTime) {
+        teeBadge = '<span class="tee-badge">' + playerTeeTime + '</span>';
       } else if (hasTeedOff(p, curRound) && gd.playerThru[p.name] != null) {
         teeBadge = '<span class="hole-badge">Hole ' + (gd.playerThru[p.name] + 1) + '</span>';
       }
@@ -756,6 +789,7 @@ function renderAll() {
   renderLB();
   renderSC();
   updateChart();
+  renderCutLine();
 }
 
 // ── LIVE DATA ──
@@ -887,7 +921,16 @@ function applyCompetitors(competitors, activeRound) {
           storedTee = ptH + ':' + (mm < 10 ? '0' : '') + mm + ' ' + ptAmPm + ' PT';
         }
       }
-      if (storedTee) gd.teeTimes[ps[pi].name] = storedTee;
+      if (storedTee) {
+        // If the player has already completed this round, the tee time is for the next round
+        var teeRound = (ps[pi].scores[activeRound] !== null) ? activeRound + 1 : activeRound;
+        if (teeRound < 4) {
+          if (typeof gd.teeTimes[teeRound] !== 'object' || Array.isArray(gd.teeTimes[teeRound])) {
+            gd.teeTimes[teeRound] = {};
+          }
+          gd.teeTimes[teeRound][ps[pi].name] = storedTee;
+        }
+      }
 
       // Current hole — only set for in-progress players
       var sTypeName = comp.status && comp.status.type && comp.status.type.name || '';
@@ -962,6 +1005,19 @@ function fetchLive() {
         setLiveDot('off');
         setLiveText(evtName + ' \u00b7 Waiting for scores to post');
         return;
+      }
+
+      // Extract cut line from ESPN data
+      cutLineValue = null;
+      if (competition.cutLines && competition.cutLines.length) {
+        var cl = competition.cutLines[0];
+        if (cl.scoreToPar != null) {
+          cutLineValue = Math.round(cl.scoreToPar);
+        } else if (cl.displayScore) {
+          var ds = cl.displayScore.trim();
+          if (ds === 'E' || ds === 'Even') cutLineValue = 0;
+          else { var n = parseInt(ds.replace('+', '')); if (!isNaN(n)) cutLineValue = n; }
+        }
       }
 
       // Determine active round (0-indexed) from competition status
