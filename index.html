@@ -573,20 +573,28 @@ function renderSCRounds(card, team, players, key) {
     var teeBadge = '';
     if (!p.cutMissed) {
       var isInProgress = gd.playerThru[p.name] != null;
+      var hasPlayedToday = hasTeedOff(p, curRound);
+
       if (isInProgress) {
-        // Player has teed off and is currently on the course — show current hole
+        // Currently on the course
         teeBadge = '<span class="hole-badge">Hole ' + (gd.playerThru[p.name] + 1) + '</span>';
-      } else {
-        // Find the first round the player has not yet teed off in
-        var nextRound = curRound;
-        for (var rr = 0; rr <= 3; rr++) {
-          if (!hasTeedOff(p, rr)) { nextRound = rr; break; }
-          if (rr === 3) nextRound = curRound; // all rounds done
+      } else if (hasPlayedToday) {
+        // Finished for the day — show next round tee time if already released
+        var nextR = curRound + 1;
+        if (nextR <= 3) {
+          var nxtTimes = (gd.teeTimes[nextR] && typeof gd.teeTimes[nextR] === 'object') ? gd.teeTimes[nextR] : {};
+          var nxtTee = nxtTimes[p.name] || null;
+          if (nxtTee) {
+            teeBadge = '<span class="tee-badge">R' + (nextR + 1) + ': ' + nxtTee + '</span>';
+          }
         }
-        var roundTeeTimes = (gd.teeTimes[nextRound] && typeof gd.teeTimes[nextRound] === 'object') ? gd.teeTimes[nextRound] : {};
-        var playerTeeTime = roundTeeTimes[p.name] || null;
-        if (!hasTeedOff(p, nextRound) && playerTeeTime) {
-          teeBadge = '<span class="tee-badge">' + playerTeeTime + '</span>';
+        // else: nothing shown — player is done for the day
+      } else {
+        // Hasn't teed off yet today — show today's tee time if available
+        var todayTimes = (gd.teeTimes[curRound] && typeof gd.teeTimes[curRound] === 'object') ? gd.teeTimes[curRound] : {};
+        var todayTee = todayTimes[p.name] || null;
+        if (todayTee) {
+          teeBadge = '<span class="tee-badge">' + todayTee + '</span>';
         }
       }
     }
