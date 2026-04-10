@@ -649,6 +649,62 @@ function renderSC() {
 
 // ── CHART ──
 var chart = null;
+
+// Custom plugin: draws vertical dashed lines where the round number changes
+var roundBoundaryPlugin = {
+  id: 'roundBoundary',
+  afterDraw: function(ch) {
+    var labels = ch.data.labels;
+    if (!labels || labels.length < 2) return;
+    var xAxis = ch.scales.x;
+    var yAxis = ch.scales.y;
+    if (!xAxis || !yAxis) return;
+    function getRound(lbl) {
+      var m = lbl && lbl.match(/^R(\d)/);
+      return m ? parseInt(m[1]) : 0;
+    }
+    var boundaries = [];
+    for (var i = 1; i < labels.length; i++) {
+      var prev = getRound(labels[i - 1]);
+      var curr = getRound(labels[i]);
+      if (curr > prev && curr > 0) boundaries.push({ index: i, roundNum: curr });
+    }
+    if (boundaries.length === 0) return;
+    var c = ch.ctx;
+    c.save();
+    boundaries.forEach(function(b) {
+      var x = xAxis.getPixelForValue(b.index);
+      var top = yAxis.top;
+      var bottom = yAxis.bottom;
+      // Dashed vertical line
+      c.beginPath();
+      c.setLineDash([5, 4]);
+      c.strokeStyle = 'rgba(203,161,53,0.55)';
+      c.lineWidth = 1.5;
+      c.moveTo(x, top);
+      c.lineTo(x, bottom);
+      c.stroke();
+      c.setLineDash([]);
+      // Pill label at top
+      var txt = 'R' + b.roundNum + ' Start';
+      c.font = '600 10px Inter, sans-serif';
+      var tw = c.measureText(txt).width;
+      var ph = 16, pw = tw + 10, py = top + 6, px = x - pw / 2;
+      c.fillStyle = 'rgba(203,161,53,0.18)';
+      c.strokeStyle = 'rgba(203,161,53,0.7)';
+      c.lineWidth = 1;
+      c.beginPath();
+      c.roundRect(px, py, pw, ph, 3);
+      c.fill();
+      c.stroke();
+      c.fillStyle = '#CBA135';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      c.fillText(txt, x, py + ph / 2);
+    });
+    c.restore();
+  }
+};
 var circles = {};
 
 function makeCircle(src, size) {
@@ -723,6 +779,7 @@ function initChart() {
     var ctx = document.getElementById('scoreChart').getContext('2d');
     chart = new Chart(ctx, {
       type: 'line',
+      plugins: [roundBoundaryPlugin],
       data: { labels: chartLabels(), datasets: buildDatasets() },
       options: {
         responsive: true,
