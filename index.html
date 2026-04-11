@@ -174,6 +174,69 @@
 
     footer { text-align:center; padding:1.5rem; font-size:.67rem; letter-spacing:2px; text-transform:uppercase; color:#2a4a35; }
 
+    /* ── H2H MATCHUP SCOREBOARD ── */
+    .h2h-stage {
+      background: var(--green-dk);
+      padding: 14px 14px 20px;
+      border-radius: 5px;
+      position: relative;
+      box-shadow: 0 30px 80px rgba(0,0,0,.8), inset 0 1px 2px rgba(255,255,255,.08), inset 0 -4px 0 rgba(0,0,0,.3);
+      overflow-x: auto;
+    }
+    .h2h-face { background: var(--cream); border: 1px solid #c8c3b0; overflow: hidden; min-width: 720px; }
+    .h2h-title-bar {
+      background: var(--cream); border-bottom: 3px solid var(--ink);
+      text-align: center; padding: .9rem 1rem .75rem;
+    }
+    .h2h-title-txt {
+      font-family: 'Playfair Display', serif; font-weight: 900;
+      font-size: 1.05rem; letter-spacing: 5px; text-transform: uppercase; color: var(--ink);
+    }
+    .h2h-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .h2h-tbl col.c-label { width: 140px; }
+    .h2h-tbl col.c-hole  { width: 34px; }
+    .h2h-tbl col.c-sub   { width: 42px; }
+    .h2h-tbl thead tr.h2h-hdr-row { background: var(--cream2); border-bottom: 2px solid var(--ink); }
+    .h2h-tbl thead tr.h2h-hdr-row th {
+      padding: .42rem .2rem; font-size: .63rem; font-weight: 800;
+      letter-spacing: 1.2px; text-transform: uppercase; color: var(--ink);
+      text-align: center; border-right: 1px solid #d8d4c8;
+    }
+    .h2h-tbl thead tr.h2h-hdr-row th:first-child { text-align: left; padding-left: .75rem; border-right: 2px solid var(--ink); }
+    .h2h-tbl thead tr.h2h-hdr-row th.c-divider { border-right: 2px solid var(--ink); background: var(--cream3); }
+    .h2h-par-row td {
+      padding: .38rem .2rem; font-size: .7rem; font-weight: 700;
+      text-align: center; color: var(--ink2); background: var(--cream2);
+      border-right: 1px solid #d8d4c8; border-bottom: 2px solid var(--ink);
+    }
+    .h2h-par-row td:first-child { text-align: left; padding-left: .75rem; font-weight: 800; font-size: .72rem; border-right: 2px solid var(--ink); }
+    .h2h-par-row td.c-divider { background: var(--cream3); border-right: 2px solid var(--ink); font-weight: 800; }
+    .h2h-section-row td {
+      background: var(--green); color: var(--cream);
+      text-align: center; font-size: .62rem; font-weight: 800;
+      letter-spacing: 3px; text-transform: uppercase;
+      padding: .38rem .5rem; border-bottom: 1px solid var(--green-dk);
+    }
+    .h2h-player-row td {
+      padding: .55rem .2rem; font-size: .78rem; font-weight: 600;
+      text-align: center; color: var(--ink);
+      border-right: 1px solid #d8d4c8; border-bottom: 1px solid var(--cream3);
+      background: var(--cream);
+    }
+    .h2h-player-row:nth-child(even) td { background: #FAF7EE; }
+    .h2h-player-row td:first-child {
+      text-align: left; padding-left: .75rem; font-weight: 700;
+      font-size: .8rem; border-right: 2px solid var(--ink);
+    }
+    .h2h-player-row td.c-divider { border-right: 2px solid var(--ink); background: var(--cream3) !important; font-weight: 800; }
+    /* Hole score colour chips */
+    .h-eagle  { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#fff;font-weight:800;font-size:.72rem; }
+    .h-birdie { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--red);color:#fff;font-weight:800;font-size:.72rem; }
+    .h-par    { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;color:var(--ink);font-weight:600;font-size:.72rem; }
+    .h-bogey  { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:2px solid var(--ink);color:var(--ink);font-weight:800;font-size:.72rem; }
+    .h-double { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--ink);color:#fff;font-weight:800;font-size:.72rem; }
+    @media(max-width:600px) { .h2h-tbl col.c-label { width:110px; } .h2h-tbl col.c-hole { width:28px; } }
+
     /* ── TEE TIME BADGE ── */
     .tee-badge {
       display:inline-block; margin-left:.45rem;
@@ -238,6 +301,11 @@
 
   <div class="sec-lbl"><span>Team Scorecards</span></div>
   <div class="sc-grid" id="sc-grid"></div>
+
+  <div class="sec-lbl"><span>Today's Matchup · Spieth vs Straka</span></div>
+  <div class="h2h-stage">
+    <div class="h2h-face" id="h2h-board"></div>
+  </div>
 
   <div class="sec-lbl"><span>Score Tracker</span></div>
   <div class="chart-panel">
@@ -943,9 +1011,128 @@ function updateChart() {
   chart.update();
 }
 
+// ── HEAD-TO-HEAD MATCHUP SCOREBOARD ──
+var AUGUSTA_PARS = [4,5,4,3,4,3,4,5,4, 4,4,3,5,4,5,3,4,4];
+
+function findPlayer(name) {
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    var ps = gd[keys[i]];
+    for (var j = 0; j < ps.length; j++) {
+      if (ps[j].name === name) return ps[j];
+    }
+  }
+  return null;
+}
+
+function holeChip(strokes, par) {
+  if (strokes === null || strokes === undefined) return '<span style="color:#bbb">—</span>';
+  var diff = strokes - par;
+  var cls = diff <= -2 ? 'h-eagle' : diff === -1 ? 'h-birdie' : diff === 0 ? 'h-par' : diff === 1 ? 'h-bogey' : 'h-double';
+  return '<span class="' + cls + '">' + strokes + '</span>';
+}
+
+function renderH2H() {
+  var el = document.getElementById('h2h-board');
+  if (!el) return;
+
+  // Use autoDetectRound as a base, but advance to the next round if it has
+  // tee times seeded for our players and hasn't actually started scoring yet.
+  var curRound = autoDetectRound();
+  var nextRound = curRound + 1;
+  if (nextRound <= 3 && !isRoundActuallyStarted(nextRound)) {
+    var nextTimes = gd.teeTimes[nextRound];
+    if (nextTimes && typeof nextTimes === 'object' &&
+        (nextTimes['Jordan Spieth'] || nextTimes['Sepp Straka'])) {
+      curRound = nextRound;
+    }
+  }
+
+  var roundLabel = 'Round ' + (curRound + 1);
+  var players = [
+    { player: findPlayer('Jordan Spieth'), name: 'Jordan Spieth', label: 'Spieth', team: '#1d4ed8' },
+    { player: findPlayer('Sepp Straka'),   name: 'Sepp Straka',   label: 'Straka', team: '#b91c1c' }
+  ];
+
+  // Build column group
+  var colgroup = '<colgroup><col class="c-label">';
+  for (var h = 0; h < 18; h++) {
+    colgroup += '<col class="c-hole">';
+    if (h === 8) colgroup += '<col class="c-sub">';
+  }
+  colgroup += '<col class="c-sub"><col class="c-sub"></colgroup>';
+
+  // Header row
+  var hdrHoles = '';
+  for (var h = 0; h < 18; h++) {
+    hdrHoles += '<th>' + (h + 1) + '</th>';
+    if (h === 8) hdrHoles += '<th class="c-divider">OUT</th>';
+  }
+  var hdr = '<thead><tr class="h2h-hdr-row"><th>Player</th>' + hdrHoles + '<th class="c-divider">IN</th><th class="c-divider">TOT</th></tr>';
+
+  // Par row
+  var parCells = '';
+  var frontPar = 0, backPar = 0;
+  for (var h = 0; h < 18; h++) {
+    parCells += '<td>' + AUGUSTA_PARS[h] + '</td>';
+    if (h < 9) frontPar += AUGUSTA_PARS[h]; else backPar += AUGUSTA_PARS[h];
+    if (h === 8) parCells += '<td class="c-divider">' + frontPar + '</td>';
+  }
+  var parRow = '<tr class="h2h-par-row"><td>Par</td>' + parCells + '<td class="c-divider">' + backPar + '</td><td class="c-divider">72</td></tr></thead>';
+
+  // Section row
+  var sectionRow = '<tr class="h2h-section-row"><td colspan="22">' + roundLabel + ' · Augusta National</td></tr>';
+
+  // Player rows
+  var bodyRows = sectionRow;
+  for (var pi = 0; pi < players.length; pi++) {
+    var info = players[pi];
+    var p = info.player;
+    var hs = (p && p.holeScores && p.holeScores[curRound]) ? p.holeScores[curRound] : Array(18).fill(null);
+
+    var frontSum = 0, backSum = 0, frontHas = false, backHas = false;
+    var holeCells = '';
+    for (var h = 0; h < 18; h++) {
+      var strokes = hs[h];
+      holeCells += '<td>' + holeChip(strokes, AUGUSTA_PARS[h]) + '</td>';
+      if (h < 9 && strokes !== null) { frontSum += strokes; frontHas = true; }
+      if (h >= 9 && strokes !== null) { backSum += strokes; backHas = true; }
+      if (h === 8) holeCells += '<td class="c-divider">' + (frontHas ? frontSum : '—') + '</td>';
+    }
+    var inCell = backHas ? backSum : '—';
+    var totCell = (frontHas && backHas) ? (frontSum + backSum) : (frontHas ? frontSum : '—');
+
+    // Status badge: current hole if in-progress, "F" if finished, tee time if not yet started
+    var thru = p ? gd.playerThru[p.name] : null;
+    var statusBadge = '';
+    if (thru != null) {
+      // On the course right now
+      statusBadge = '<span class="tee-badge">Hole ' + (thru + 1) + '</span>';
+    } else if (p && p.scores && p.scores[curRound] !== null) {
+      // Finished today's round
+      statusBadge = '<span class="tee-badge">F</span>';
+    } else {
+      // Not yet teed off — show today's tee time
+      var todayTimes = (gd.teeTimes[curRound] && typeof gd.teeTimes[curRound] === 'object') ? gd.teeTimes[curRound] : {};
+      var teeTime = todayTimes[info.name] || null;
+      if (teeTime) statusBadge = '<span class="tee-badge">' + teeTime + '</span>';
+    }
+
+    var nameCell = '<span style="color:' + info.team + ';font-weight:800">' + info.label.toUpperCase() + '</span>' + statusBadge;
+    bodyRows += '<tr class="h2h-player-row"><td>' + nameCell + '</td>' + holeCells +
+      '<td class="c-divider">' + inCell + '</td>' +
+      '<td class="c-divider">' + totCell + '</td></tr>';
+  }
+
+  el.innerHTML =
+    '<div class="h2h-title-bar"><div class="h2h-title-txt">Matchup</div></div>' +
+    '<table class="h2h-tbl">' + colgroup + hdr + parRow + '<tbody>' + bodyRows + '</tbody></table>';
+}
+
 function renderAll() {
   renderLB();
   renderSC();
+  renderH2H();
   updateChart();
   renderCutLine();
 }
