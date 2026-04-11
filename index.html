@@ -445,10 +445,10 @@ if (!gd.playerThru) gd.playerThru = {};
 // seed data when live ESPN hole data is absent or behind — live always wins.
 (function() {
   var seeds = {
-    'Jordan Spieth': [4,5,3,4,4,2,4,4,4, 4,4,3,6,4, null,null,null,null],
-    'Sepp Straka':   [4,4,3,3,4,3,4,5,4, 3,5,3,4,4, null,null,null,null],
-    'Cameron Young': [4,5,3, null,null,null,null,null,null, null,null,null,null,null,null,null,null,null],
-    'Jason Day':     [5,4,4, null,null,null,null,null,null, null,null,null,null,null,null,null,null,null]
+    'Jordan Spieth': [4,5,3,4,4,2,4,4,4, 4,4,3,6,4, 4,null,null,null],
+    'Sepp Straka':   [4,4,3,3,4,3,4,5,4, 3,5,3,4,4, 5,null,null,null],
+    'Cameron Young': [4,5,3,2, null,null,null,null,null, null,null,null,null,null,null,null,null,null],
+    'Jason Day':     [5,4,4,4, null,null,null,null,null, null,null,null,null,null,null,null,null,null]
   };
   var teamKeys = Object.keys(TEAMS);
   for (var name in seeds) {
