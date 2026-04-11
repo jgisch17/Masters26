@@ -249,6 +249,27 @@
 <footer>Augusta National &nbsp;&middot;&nbsp; Masters 2026 &nbsp;&middot;&nbsp; The Bet</footer>
 
 <script>
+// Augusta National par values for all 18 holes (total par 72)
+var AUGUSTA_PARS = [4,5,4,3,4,3,4,5,4, 4,4,3,5,4,5,3,4,4];
+
+// Utility used by hole-by-hole matchup tables (elements may not exist in current layout)
+function findPlayer(name) {
+  var keys = Object.keys(TEAMS);
+  for (var k = 0; k < keys.length; k++) {
+    var ps = gd[keys[k]];
+    for (var p = 0; p < ps.length; p++) {
+      if (ps[p].name === name) return ps[p];
+    }
+  }
+  return null;
+}
+function holeChip(strokes, par) {
+  if (strokes == null) return '<span style="color:#aaa">-</span>';
+  var diff = strokes - par;
+  var cls = diff < 0 ? 's-under' : diff > 0 ? 's-over' : 's-even';
+  return '<span class="chip ' + cls + '">' + strokes + '</span>';
+}
+
 var TEAMS = {
   jordan: {
     name: 'Team Jordan',
@@ -1095,7 +1116,7 @@ function renderAll() {
 }
 
 // ── LIVE DATA ──
-var ESPNURL = 'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard';
+var ESPNURL = 'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?limit=200';
 var liveTimer = null;
 var countdownTimer = null;
 var nextRefreshAt = null;
@@ -1171,22 +1192,39 @@ function applyCompetitors(competitors, activeRound) {
       // Treat as per-hole when: ls has >4 entries, OR the player is currently in progress.
       // (Per-round summaries have at most 4 entries; in-progress players always have hole data.)
       var ls = comp.linescores || [];
+
+      // ESPN sometimes sends a mixed format: completed-round totals (value ≥ 60)
+      // prepended to the current round's per-hole entries (value 1-15 or displayValue "-").
+      // Detect completed-round prefix entries so we can handle both in one pass.
+      var completedRoundPrefix = 0;
       if (ls.length > 4) {
-        // Per-hole format — ESPN sends 18 entries for in-progress rounds,
-        // with displayValue="-" for unplayed holes.
+        for (var ri = 0; ri < Math.min(ls.length, 4); ri++) {
+          // Round totals for Augusta will be raw strokes ~63-82 (value > 40)
+          if (ls[ri] && ls[ri].value != null && ls[ri].value > 40) {
+            completedRoundPrefix = ri + 1;
+          } else { break; }
+        }
+      }
+
+      if (ls.length > 4) {
+        // Per-hole data present (for active round); save any preceding round summaries first
+        for (var r = 0; r < completedRoundPrefix; r++) {
+          var val = parseRoundScore(ls[r]);
+          if (val !== null) ps[pi].scores[r] = val;
+        }
+        // Process per-hole entries starting after the round-summary prefix
         var roundSum = 0, hasData = false;
-        var holeCount = Math.min(ls.length, 18);
+        var holeEntries = ls.slice(completedRoundPrefix);
+        var holeCount = Math.min(holeEntries.length, 18);
         for (var h = 0; h < holeCount; h++) {
-          var hls = ls[h];
+          var hls = holeEntries[h];
           if (!hls || (hls.displayValue && hls.displayValue.trim() === '-')) continue;
-          // Compute to-par first so we can derive strokes as a fallback
-          // (ESPN occasionally sends value=0 for "E" instead of raw stroke count)
           var holePar = parseRoundScore(hls);
           var strokes = null;
           if (hls.value != null && hls.value >= 1 && hls.value <= 15) {
-            strokes = Math.round(hls.value); // ESPN raw stroke count
+            strokes = Math.round(hls.value);
           } else if (holePar !== null && h < AUGUSTA_PARS.length) {
-            strokes = AUGUSTA_PARS[h] + holePar; // derive: hole par + to-par delta
+            strokes = AUGUSTA_PARS[h] + holePar;
           }
           if (strokes !== null) {
             ps[pi].holeScores[activeRound][h] = strokes;
@@ -1196,10 +1234,17 @@ function applyCompetitors(competitors, activeRound) {
         }
         ps[pi].scores[activeRound] = hasData ? roundSum : null;
       } else {
-        // Per-round summary format (≤ 4 entries — one per round)
+        // Per-round summary format (≤ 4 entries — one per completed/active round).
+        // Only overwrite a round's score if ESPN gives a non-null value, so that
+        // a temporarily-missing entry doesn't erase a previously-fetched score.
         for (var r = 0; r < 4; r++) {
           var val = parseRoundScore(ls[r]);
-          ps[pi].scores[r] = val;
+          if (val !== null) {
+            ps[pi].scores[r] = val;
+          } else if (r >= activeRound) {
+            // Clear future/current-round slots that haven't started
+            ps[pi].scores[r] = null;
+          }
         }
       }
 
@@ -1309,7 +1354,14 @@ function fetchLive() {
         return;
       }
 
+      // Find the Masters tournament specifically; fall back to first event
       var evt = events[0];
+      for (var ei = 0; ei < events.length; ei++) {
+        if (events[ei].name && events[ei].name.toLowerCase().indexOf('masters') !== -1) {
+          evt = events[ei];
+          break;
+        }
+      }
       var evtName = evt.name || 'PGA Tour';
       var competition = evt.competitions && evt.competitions[0];
       var competitors = (competition && competition.competitors) || [];
@@ -1339,7 +1391,6 @@ function fetchLive() {
         activeRound = Math.max(0, Math.min(3, competition.status.period - 1));
       }
       var result = applyCompetitors(competitors, activeRound);
-      inferHoleScores();
       injectR3StartSnapshot();
       addSnapshot();
       localStorage.setItem('masters2026bet', JSON.stringify(gd));
@@ -1350,18 +1401,18 @@ function fetchLive() {
       document.getElementById('lastUpd').textContent =
         'Live data \u00b7 ' + evtName + ' \u00b7 Updated ' + timeStr;
 
-      nextRefreshAt = Date.now() + 600000;
+      nextRefreshAt = Date.now() + 300000;
       setLiveDot(result.unmatched.length ? 'err' : 'on');
-      var statusMsg = result.found + '/' + result.total + ' players matched \u00b7 next refresh in 10 min';
+      var statusMsg = result.found + '/' + result.total + ' players matched \u00b7 next refresh in 5 min';
       if (result.unmatched.length) {
         statusMsg += ' \u00b7 No ESPN data for: ' + result.unmatched.join(', ');
       }
       setLiveText(statusMsg);
       startCountdown();
 
-      // Schedule next refresh in 10 minutes
+      // Schedule next refresh in 5 minutes
       if (liveTimer) clearTimeout(liveTimer);
-      liveTimer = setTimeout(fetchLive, 600000);
+      liveTimer = setTimeout(fetchLive, 300000);
     })
     .catch(function(err) {
       console.error('Live fetch error:', err);
