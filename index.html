@@ -434,47 +434,47 @@ if (!gd.holeInferState) gd.holeInferState = {};
   }
 })();
 
-// ── R3 HOLE SCORE SEED (Spieth & Straka, confirmed manually) ──
-// Clears any bad hole data, seeds the two confirmed holes, and primes the
-// inference state so inferHoleScores() can derive hole 3+ from round-total deltas.
+// ── R3 HOLE SCORE SEED (one-time, versioned) ──
+// Runs only once per seed version — never clears inferred data on subsequent loads.
+// Bump SEED_VERSION when new confirmed scores are added.
 (function() {
+  var SEED_VERSION = 3; // bump to re-apply
+  if (gd.holeSeedVersion >= SEED_VERSION) return;
+
   var R3 = 2;
-  // Confirmed scores: hole 1 = par (4), hole 2: Straka birdie (4), Spieth par (5)
   var seeds = {
     'Jordan Spieth': { holeScores: [4, 5], roundTopar: 0,  thru: 2 },
     'Sepp Straka':   { holeScores: [4, 4], roundTopar: -1, thru: 2 }
   };
+
   var teamKeys = Object.keys(TEAMS);
-  var changed = false;
   for (var ti = 0; ti < teamKeys.length; ti++) {
     var ps = gd[teamKeys[ti]];
     for (var pi = 0; pi < ps.length; pi++) {
       var s = seeds[ps[pi].name];
       if (!s) continue;
-      // Clear all 18 R3 hole scores first
-      for (var h = 0; h < 18; h++) {
-        if (ps[pi].holeScores[R3][h] !== null) {
-          ps[pi].holeScores[R3][h] = null;
-          changed = true;
+      // Only overwrite holes that are still null (don't clobber inferred scores)
+      for (var h = 0; h < s.holeScores.length; h++) {
+        if (ps[pi].holeScores[R3][h] === null) {
+          ps[pi].holeScores[R3][h] = s.holeScores[h];
         }
       }
-      // Seed the confirmed holes
-      for (var h = 0; h < s.holeScores.length; h++) {
-        ps[pi].holeScores[R3][h] = s.holeScores[h];
-      }
-      ps[pi].scores[R3] = s.roundTopar;
-      changed = true;
+      if (ps[pi].scores[R3] === null) ps[pi].scores[R3] = s.roundTopar;
     }
   }
-  // Seed playerThru and prime inference state
+
+  // Prime inference state (only if not already set further along)
   for (var name in seeds) {
-    gd.playerThru[name] = seeds[name].thru;
-    gd.holeInferState[name + '_' + R3] = {
-      thru: seeds[name].thru,
-      topar: seeds[name].roundTopar
-    };
+    var key = name + '_' + R3;
+    var existing = gd.holeInferState[key];
+    if (!existing || existing.thru < seeds[name].thru) {
+      gd.holeInferState[key] = { thru: seeds[name].thru, topar: seeds[name].roundTopar };
+    }
+    if (gd.playerThru[name] == null) gd.playerThru[name] = seeds[name].thru;
   }
-  if (changed) localStorage.setItem('masters2026bet', JSON.stringify(gd));
+
+  gd.holeSeedVersion = SEED_VERSION;
+  localStorage.setItem('masters2026bet', JSON.stringify(gd));
 })();
 
 // Sync rosters: rebuild each team from TEAMS, preserving scores for returning players
@@ -1094,6 +1094,13 @@ function holeChip(strokes, par) {
 // against the last known state. If exactly one new hole was completed, the delta
 // in round-to-par tells us precisely what they scored on that hole.
 // Example: thru goes 2→3, to-par goes 0→-1 → hole 3 = par(4) + (-1) = 3 (birdie).
+//
+// Key rules to avoid bugs:
+//  - Only update state when playerThru is explicitly set (not null) — null means
+//    the player is between holes or finished; we can't tell which without risking
+//    the state jumping to 18 and blocking future inferences.
+//  - Never let state.thru go backwards — if ESPN briefly drops playerThru,
+//    the state stays at the last confirmed thru value.
 
 var INFER_PLAYERS = ['Jordan Spieth', 'Sepp Straka', 'Jason Day', 'Cameron Young'];
 
@@ -1104,37 +1111,41 @@ function inferHoleScores() {
   for (var ni = 0; ni < INFER_PLAYERS.length; ni++) {
     var pname = INFER_PLAYERS[ni];
 
-    // Collect every team instance of this player (e.g. Straka is on two teams)
+    // Collect every team instance (e.g. Straka is on two teams)
     var instances = [];
     var tkeys = Object.keys(TEAMS);
     for (var ti = 0; ti < tkeys.length; ti++) {
       var tps = gd[tkeys[ti]];
-      for (var pi = 0; pi < tps.length; pi++) {
-        if (tps[pi].name === pname) instances.push(tps[pi]);
+      for (var pi2 = 0; pi2 < tps.length; pi2++) {
+        if (tps[pi2].name === pname) instances.push(tps[pi2]);
       }
     }
     if (!instances.length) continue;
 
     var p = instances[0];
-    var roundScore = p.scores[curRound]; // running to-par for the round (null = not started)
-    if (roundScore === null) continue;
+    var roundScore = p.scores[curRound];
+    if (roundScore === null) continue; // hasn't started
 
-    // thru = holes completed so far (null once player finishes, so treat as 18)
+    // Only use playerThru when it's explicitly set (player is STATUS_IN_PROGRESS).
+    // If null, the player is between holes or finished — don't update state.thru
+    // downward; just update the topar if the score changed.
     var thru = gd.playerThru[pname];
-    var effectiveThru = (thru != null) ? thru : 18;
 
     var key = pname + '_' + curRound;
     var prev = gd.holeInferState[key];
 
     if (!prev) {
-      // First time we see data for this player this round — record baseline
-      gd.holeInferState[key] = { thru: effectiveThru, topar: roundScore };
+      // First sighting — baseline from whatever thru we have
+      if (thru != null) {
+        gd.holeInferState[key] = { thru: thru, topar: roundScore };
+      }
       continue;
     }
 
-    if (effectiveThru > prev.thru) {
-      if (effectiveThru - prev.thru === 1) {
-        // Exactly one hole advanced — we can pinpoint the score
+    if (thru != null && thru > prev.thru) {
+      // Player advanced hole(s) while we can see them in-progress
+      if (thru - prev.thru === 1) {
+        // Exactly one hole — infer score from delta
         var hIdx = prev.thru; // 0-indexed hole just completed
         var delta = roundScore - prev.topar;
         var strokes = AUGUSTA_PARS[hIdx] + delta;
@@ -1144,10 +1155,13 @@ function inferHoleScores() {
           }
         }
       }
-      // If >1 hole advanced in one refresh we can't split the delta — leave those blank
-      gd.holeInferState[key] = { thru: effectiveThru, topar: roundScore };
-    } else if (roundScore !== prev.topar) {
-      // Score updated but thru didn't change — keep state current
+      // Advance state — never allow thru to go backwards
+      gd.holeInferState[key] = { thru: thru, topar: roundScore };
+    } else if (thru != null && thru === prev.thru && roundScore !== prev.topar) {
+      // Same hole count but score updated — sync topar
+      gd.holeInferState[key].topar = roundScore;
+    } else if (thru == null && roundScore !== prev.topar) {
+      // Player not in-progress but score changed — sync topar only, keep thru
       gd.holeInferState[key].topar = roundScore;
     }
   }
