@@ -182,6 +182,13 @@
       border-radius:3px; padding:.1rem .35rem;
       vertical-align:middle; white-space:nowrap;
     }
+    .mc-badge {
+      display:inline-block; margin-left:.45rem;
+      font-size:.58rem; font-weight:700; letter-spacing:.6px;
+      color:#880000; background:#ffe0e0; border:1px solid #cc8888;
+      border-radius:3px; padding:.1rem .35rem;
+      vertical-align:middle; white-space:nowrap;
+    }
     /* ── HOLE BADGE (replaces tee time once player tees off) ── */
     .hole-badge {
       display:inline-block; margin-left:.45rem;
@@ -328,6 +335,30 @@ if (!gd.playerThru) gd.playerThru = {};
   }
 })();
 
+// ── SEED R3 TEE TIMES (Saturday Apr 11) ──
+// These are hardcoded from the official pairings; fetchLive() will overwrite if API data differs.
+// Players not listed (Nicolai Højgaard, Ryan Fox, Bryson DeChambeau) missed the cut.
+(function() {
+  if (!gd.teeTimes[2] || typeof gd.teeTimes[2] !== 'object') gd.teeTimes[2] = {};
+  var r3 = gd.teeTimes[2];
+  var r3Times = {
+    'Jon Rahm':             '6:53 AM PT',
+    'Jordan Spieth':        '8:21 AM PT',
+    'Sepp Straka':          '8:21 AM PT',
+    'Ludvig Aberg':         '9:16 AM PT',
+    'Scottie Scheffler':    '9:16 AM PT',
+    'Hideki Matsuyama':     '10:00 AM PT',
+    'Xander Schauffele':    '10:11 AM PT',
+    'Brooks Koepka':        '10:33 AM PT',
+    'Jason Day':            '10:55 AM PT',
+    'Cameron Young':        '10:55 AM PT',
+    'Tommy Fleetwood':      '11:28 AM PT'
+  };
+  for (var name in r3Times) {
+    if (!r3[name]) r3[name] = r3Times[name];
+  }
+})();
+
 // Sync rosters: rebuild each team from TEAMS, preserving scores for returning players
 (function() {
   var teamKeys = Object.keys(TEAMS);
@@ -347,8 +378,49 @@ if (!gd.playerThru) gd.playerThru = {};
       return { name: name, scores: [null, null, null, null], holeScores: [Array(18).fill(null),Array(18).fill(null),Array(18).fill(null),Array(18).fill(null)], cutMissed: false };
     });
   }
+  // Mark known missed-cut players (R3 pairings confirmed missing)
+  var cutPlayers = ['Nicolai Højgaard', 'Ryan Fox', 'Bryson DeChambeau'];
+  for (var ci = 0; ci < cutPlayers.length; ci++) {
+    var cname = cutPlayers[ci];
+    for (var ti = 0; ti < teamKeys.length; ti++) {
+      for (var pi = 0; pi < gd[teamKeys[ti]].length; pi++) {
+        if (gd[teamKeys[ti]][pi].name === cname) {
+          gd[teamKeys[ti]][pi].cutMissed = true;
+        }
+      }
+    }
+  }
   localStorage.setItem('masters2026bet', JSON.stringify(gd));
 })();
+
+// ── CLEAN UP BOGUS HISTORY ENTRIES ──
+// The old isRoundStarted bug treated cut players as proof a round started,
+// so snapshots were saved with inflated round labels (e.g. "R4 · 05:06 PM")
+// before those rounds actually began. Strip any entry whose round number
+// exceeds the highest round that has real (non-cut) player scores.
+(function() {
+  if (!gd.history || gd.history.length === 0) return;
+  var maxReal = 0;
+  var teamKeys = Object.keys(TEAMS);
+  for (var ti = 0; ti < teamKeys.length; ti++) {
+    var ps = gd[teamKeys[ti]];
+    for (var pi = 0; pi < ps.length; pi++) {
+      if (ps[pi].cutMissed) continue;
+      for (var r = 3; r >= 0; r--) {
+        if (ps[pi].scores[r] !== null) { if (r + 1 > maxReal) maxReal = r + 1; break; }
+      }
+    }
+  }
+  var before = gd.history.length;
+  gd.history = gd.history.filter(function(s) {
+    var m = s.label && s.label.match(/^R(\d)/);
+    return !m || parseInt(m[1]) <= maxReal + 1; // allow current + next (in-progress labels)
+  });
+  if (gd.history.length !== before) {
+    localStorage.setItem('masters2026bet', JSON.stringify(gd));
+  }
+})();
+
 var liveActive = false;
 var cutLineValue = null;
 
@@ -382,7 +454,7 @@ function autoDetectRound() {
 
 // ── CALCULATIONS ──
 function roundScore(player, r) {
-  if (player.cutMissed && r >= 2) return 5;
+  if (player.cutMissed && r >= 2) return isRoundActuallyStarted(r) ? 5 : null;
   return player.scores[r];
 }
 
@@ -434,7 +506,7 @@ function isRoundStarted(r) {
   for (var i = 0; i < keys.length; i++) {
     var ps = gd[keys[i]];
     for (var j = 0; j < ps.length; j++) {
-      if ((ps[j].cutMissed && r >= 2) || ps[j].scores[r] !== null) return true;
+      if (ps[j].scores[r] !== null) return true;
     }
   }
   return false;
@@ -541,6 +613,17 @@ function renderLB() {
 
 // ── SCORECARDS ──
 
+// Returns true only when non-cut players have actually started posting scores for round r
+function isRoundActuallyStarted(r) {
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    var ps = gd[keys[i]];
+    for (var j = 0; j < ps.length; j++) {
+      if (!ps[j].cutMissed && ps[j].scores[r] !== null) return true;
+    }
+  }
+  return false;
+}
 
 function renderSCRounds(card, team, players, key) {
   var total = teamTotal(key);
@@ -563,10 +646,11 @@ function renderSCRounds(card, team, players, key) {
     var pTotal = playerTotal(p);
     var rCells = '';
     for (var r = 0; r < 4; r++) {
-      var mcAuto = p.cutMissed && r >= 2;
+      var mcAuto = p.cutMissed && r >= 2 && isRoundActuallyStarted(r);
+      var mcPending = p.cutMissed && r >= 2 && !isRoundActuallyStarted(r);
       var sc = roundScore(p, r);
-      var cls = mcAuto ? 's-mc' : scoreClass(sc);
-      var disp = mcAuto ? '+5' : fmtPlain(sc);
+      var cls = mcAuto ? 's-mc' : mcPending ? '' : scoreClass(sc);
+      var disp = mcAuto ? '+5' : mcPending ? '\u2014' : fmtPlain(sc);
       rCells += '<td><span class="chip ' + cls + '">' + disp + '</span></td>';
     }
 
@@ -599,8 +683,9 @@ function renderSCRounds(card, team, players, key) {
       }
     }
 
+    var mcBadge = p.cutMissed ? '<span class="mc-badge">MC</span>' : '';
     tr.innerHTML =
-      '<td>' + p.name + teeBadge + '</td>' +
+      '<td>' + p.name + mcBadge + teeBadge + '</td>' +
       rCells +
       '<td class="' + scoreClass(pTotal) + '" style="font-weight:800">' + fmtPlain(pTotal) + '</td>';
     tbody.appendChild(tr);
