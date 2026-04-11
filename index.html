@@ -346,7 +346,7 @@ var TEAMS = {
 
 // ── DATA ──
 function makeDefault() {
-  var d = { history: [], teeTimes: {}, playerThru: {} };
+  var d = { history: [], teeTimes: {}, playerThru: {}, holeInferState: {} };
   var keys = Object.keys(TEAMS);
   for (var i = 0; i < keys.length; i++) {
     var k = keys[i];
@@ -394,6 +394,7 @@ var gd = loadData();
 if (!gd.history) gd.history = [];
 if (!gd.teeTimes) gd.teeTimes = {};
 if (!gd.playerThru) gd.playerThru = {};
+if (!gd.holeInferState) gd.holeInferState = {};
 
 // Migrate legacy flat teeTimes ({"Player Name": "7:48 AM PT"}) to per-round format ({0: {"Player Name": "..."}})
 // Flat keys are strings that are not numeric round indices
@@ -431,6 +432,49 @@ if (!gd.playerThru) gd.playerThru = {};
   for (var name in r3Times) {
     if (!r3[name]) r3[name] = r3Times[name];
   }
+})();
+
+// ── R3 HOLE SCORE SEED (Spieth & Straka, confirmed manually) ──
+// Clears any bad hole data, seeds the two confirmed holes, and primes the
+// inference state so inferHoleScores() can derive hole 3+ from round-total deltas.
+(function() {
+  var R3 = 2;
+  // Confirmed scores: hole 1 = par (4), hole 2: Straka birdie (4), Spieth par (5)
+  var seeds = {
+    'Jordan Spieth': { holeScores: [4, 5], roundTopar: 0,  thru: 2 },
+    'Sepp Straka':   { holeScores: [4, 4], roundTopar: -1, thru: 2 }
+  };
+  var teamKeys = Object.keys(TEAMS);
+  var changed = false;
+  for (var ti = 0; ti < teamKeys.length; ti++) {
+    var ps = gd[teamKeys[ti]];
+    for (var pi = 0; pi < ps.length; pi++) {
+      var s = seeds[ps[pi].name];
+      if (!s) continue;
+      // Clear all 18 R3 hole scores first
+      for (var h = 0; h < 18; h++) {
+        if (ps[pi].holeScores[R3][h] !== null) {
+          ps[pi].holeScores[R3][h] = null;
+          changed = true;
+        }
+      }
+      // Seed the confirmed holes
+      for (var h = 0; h < s.holeScores.length; h++) {
+        ps[pi].holeScores[R3][h] = s.holeScores[h];
+      }
+      ps[pi].scores[R3] = s.roundTopar;
+      changed = true;
+    }
+  }
+  // Seed playerThru and prime inference state
+  for (var name in seeds) {
+    gd.playerThru[name] = seeds[name].thru;
+    gd.holeInferState[name + '_' + R3] = {
+      thru: seeds[name].thru,
+      topar: seeds[name].roundTopar
+    };
+  }
+  if (changed) localStorage.setItem('masters2026bet', JSON.stringify(gd));
 })();
 
 // Sync rosters: rebuild each team from TEAMS, preserving scores for returning players
@@ -1045,6 +1089,70 @@ function holeChip(strokes, par) {
   return '<span class="' + cls + '">' + strokes + '</span>';
 }
 
+// ── HOLE SCORE INFERENCE ──
+// After each ESPN fetch, compares each tracked player's new (thru, round-to-par)
+// against the last known state. If exactly one new hole was completed, the delta
+// in round-to-par tells us precisely what they scored on that hole.
+// Example: thru goes 2→3, to-par goes 0→-1 → hole 3 = par(4) + (-1) = 3 (birdie).
+
+var INFER_PLAYERS = ['Jordan Spieth', 'Sepp Straka', 'Jason Day', 'Cameron Young'];
+
+function inferHoleScores() {
+  if (!gd.holeInferState) gd.holeInferState = {};
+  var curRound = autoDetectRound();
+
+  for (var ni = 0; ni < INFER_PLAYERS.length; ni++) {
+    var pname = INFER_PLAYERS[ni];
+
+    // Collect every team instance of this player (e.g. Straka is on two teams)
+    var instances = [];
+    var tkeys = Object.keys(TEAMS);
+    for (var ti = 0; ti < tkeys.length; ti++) {
+      var tps = gd[tkeys[ti]];
+      for (var pi = 0; pi < tps.length; pi++) {
+        if (tps[pi].name === pname) instances.push(tps[pi]);
+      }
+    }
+    if (!instances.length) continue;
+
+    var p = instances[0];
+    var roundScore = p.scores[curRound]; // running to-par for the round (null = not started)
+    if (roundScore === null) continue;
+
+    // thru = holes completed so far (null once player finishes, so treat as 18)
+    var thru = gd.playerThru[pname];
+    var effectiveThru = (thru != null) ? thru : 18;
+
+    var key = pname + '_' + curRound;
+    var prev = gd.holeInferState[key];
+
+    if (!prev) {
+      // First time we see data for this player this round — record baseline
+      gd.holeInferState[key] = { thru: effectiveThru, topar: roundScore };
+      continue;
+    }
+
+    if (effectiveThru > prev.thru) {
+      if (effectiveThru - prev.thru === 1) {
+        // Exactly one hole advanced — we can pinpoint the score
+        var hIdx = prev.thru; // 0-indexed hole just completed
+        var delta = roundScore - prev.topar;
+        var strokes = AUGUSTA_PARS[hIdx] + delta;
+        if (strokes >= 1 && strokes <= 12) {
+          for (var ii = 0; ii < instances.length; ii++) {
+            instances[ii].holeScores[curRound][hIdx] = strokes;
+          }
+        }
+      }
+      // If >1 hole advanced in one refresh we can't split the delta — leave those blank
+      gd.holeInferState[key] = { thru: effectiveThru, topar: roundScore };
+    } else if (roundScore !== prev.topar) {
+      // Score updated but thru didn't change — keep state current
+      gd.holeInferState[key].topar = roundScore;
+    }
+  }
+}
+
 // Injects a synthetic "R3 · Start" snapshot with pre-penalty scores (R1+R2 only)
 // so the chart boundary line appears BEFORE the +5 jump, not at it.
 // Idempotent — bails out if an R3 entry already exists in history.
@@ -1077,11 +1185,17 @@ function renderMatchup(elementId, playerDefs) {
   var el = document.getElementById(elementId);
   if (!el) return;
 
-  // Use autoDetectRound as a base, but advance to the next round if it has
-  // tee times seeded for any of our players and hasn't actually started scoring yet.
+  // Use autoDetectRound as a base, but advance to the next round if we're
+  // in the gap between rounds (tee times seeded, no scoring yet).
+  // Never advance if any matchup player is currently on the course —
+  // that means the current round is still active, not finished.
   var curRound = autoDetectRound();
+  var anyOnCourse = false;
+  for (var di = 0; di < playerDefs.length; di++) {
+    if (gd.playerThru[playerDefs[di].name] != null) { anyOnCourse = true; break; }
+  }
   var nextRound = curRound + 1;
-  if (nextRound <= 3 && !isRoundActuallyStarted(nextRound)) {
+  if (!anyOnCourse && nextRound <= 3 && !isRoundActuallyStarted(nextRound)) {
     var nextTimes = gd.teeTimes[nextRound];
     if (nextTimes && typeof nextTimes === 'object') {
       for (var di = 0; di < playerDefs.length; di++) {
@@ -1144,7 +1258,7 @@ function renderMatchup(elementId, playerDefs) {
     var thru = p ? gd.playerThru[p.name] : null;
     var statusBadge = '';
     if (thru != null) {
-      statusBadge = '<span class="tee-badge">Hole ' + (thru + 1) + '</span>';
+      statusBadge = '<span class="hole-badge">Hole ' + (thru + 1) + '</span>';
     } else if (p && p.scores && p.scores[curRound] !== null) {
       statusBadge = '<span class="tee-badge">F</span>';
     } else {
@@ -1254,18 +1368,29 @@ function applyCompetitors(competitors, activeRound) {
 
       // Per-round scores and hole-by-hole
       // ESPN sends per-hole linescores for in-progress rounds:
-      //   ls[h].value  = raw strokes on that hole (e.g. 5 for bogey on par-4)
+      //   ls[h].value        = raw strokes on that hole (e.g. 5 for bogey on par-4)
+      //                        NOTE: ESPN sometimes sends 0 for "E" instead of raw strokes.
       //   ls[h].displayValue = hole to-par ("+1", "E", "-1", or "-" if not played)
-      // When ls.length >= 18 we treat it as per-hole data for the active round.
+      // Treat as per-hole when: ls has >4 entries, OR the player is currently in progress.
+      // (Per-round summaries have at most 4 entries; in-progress players always have hole data.)
       var ls = comp.linescores || [];
-      if (ls.length >= 18) {
-        // Per-hole format — each entry is one hole of the active round
+      if (ls.length > 4) {
+        // Per-hole format — ESPN sends 18 entries for in-progress rounds,
+        // with displayValue="-" for unplayed holes.
         var roundSum = 0, hasData = false;
-        for (var h = 0; h < 18; h++) {
+        var holeCount = Math.min(ls.length, 18);
+        for (var h = 0; h < holeCount; h++) {
           var hls = ls[h];
           if (!hls || (hls.displayValue && hls.displayValue.trim() === '-')) continue;
-          var strokes = (hls.value != null && hls.value >= 1 && hls.value <= 15) ? Math.round(hls.value) : null;
-          var holePar = parseRoundScore(hls); // to-par for this hole via displayValue
+          // Compute to-par first so we can derive strokes as a fallback
+          // (ESPN occasionally sends value=0 for "E" instead of raw stroke count)
+          var holePar = parseRoundScore(hls);
+          var strokes = null;
+          if (hls.value != null && hls.value >= 1 && hls.value <= 15) {
+            strokes = Math.round(hls.value); // ESPN raw stroke count
+          } else if (holePar !== null && h < AUGUSTA_PARS.length) {
+            strokes = AUGUSTA_PARS[h] + holePar; // derive: hole par + to-par delta
+          }
           if (strokes !== null) {
             ps[pi].holeScores[activeRound][h] = strokes;
             hasData = true;
@@ -1367,7 +1492,7 @@ function startCountdown() {
         .replace(/\u00b7 next refresh in [^\u00b7]*/i, '')
         .trimEnd() + ' \u00b7 next refresh in ' + (mins > 0 ? mins + ' min' : 'soon\u2026');
     }
-  }, 60000);
+  }, 30000);
 }
 
 function fetchLive() {
@@ -1417,6 +1542,7 @@ function fetchLive() {
         activeRound = Math.max(0, Math.min(3, competition.status.period - 1));
       }
       var result = applyCompetitors(competitors, activeRound);
+      inferHoleScores();
       injectR3StartSnapshot();
       addSnapshot();
       localStorage.setItem('masters2026bet', JSON.stringify(gd));
@@ -1427,18 +1553,18 @@ function fetchLive() {
       document.getElementById('lastUpd').textContent =
         'Live data \u00b7 ' + evtName + ' \u00b7 Updated ' + timeStr;
 
-      nextRefreshAt = Date.now() + 3600000;
+      nextRefreshAt = Date.now() + 600000;
       setLiveDot(result.unmatched.length ? 'err' : 'on');
-      var statusMsg = result.found + '/' + result.total + ' players matched \u00b7 next refresh in 60 min';
+      var statusMsg = result.found + '/' + result.total + ' players matched \u00b7 next refresh in 10 min';
       if (result.unmatched.length) {
         statusMsg += ' \u00b7 No ESPN data for: ' + result.unmatched.join(', ');
       }
       setLiveText(statusMsg);
       startCountdown();
 
-      // Schedule next hourly refresh
+      // Schedule next refresh in 10 minutes
       if (liveTimer) clearTimeout(liveTimer);
-      liveTimer = setTimeout(fetchLive, 3600000);
+      liveTimer = setTimeout(fetchLive, 600000);
     })
     .catch(function(err) {
       console.error('Live fetch error:', err);
