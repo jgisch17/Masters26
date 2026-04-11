@@ -262,7 +262,6 @@
   <div class="sc-grid" id="sc-grid"></div>
 
   <div class="sec-lbl"><span>Head-to-Head Matchups</span></div>
-  <div class="h2h-wrap" id="h2h-spieth-straka"></div>
   <div class="h2h-wrap" id="h2h-day-young"></div>
 
   <div class="sec-lbl"><span>Score Tracker</span></div>
@@ -1177,10 +1176,6 @@ function renderMatchup(elementId, playerDefs) {
 }
 
 function renderH2H() {
-  renderMatchup('h2h-spieth-straka', [
-    { name: 'Jordan Spieth', label: 'Spieth', team: '#1d4ed8' },
-    { name: 'Sepp Straka',   label: 'Straka', team: '#b91c1c' }
-  ]);
   renderMatchup('h2h-day-young', [
     { name: 'Cameron Young',  label: 'C. Young', team: '#1d4ed8' },
     { name: 'Jason Day',      label: 'Day',      team: '#b91c1c' }
