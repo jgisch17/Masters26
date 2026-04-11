@@ -235,6 +235,7 @@
     .h-par    { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;color:var(--ink);font-weight:600;font-size:.72rem; }
     .h-bogey  { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border:2px solid var(--ink);color:var(--ink);font-weight:800;font-size:.72rem; }
     .h-double { display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:var(--ink);color:#fff;font-weight:800;font-size:.72rem; }
+    .h2h-matchup-lbl { text-align:center; font-size:.65rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold); margin-bottom:.5rem; }
     @media(max-width:600px) { .h2h-tbl col.c-label { width:110px; } .h2h-tbl col.c-hole { width:28px; } }
 
     /* ── TEE TIME BADGE ── */
@@ -302,9 +303,14 @@
   <div class="sec-lbl"><span>Team Scorecards</span></div>
   <div class="sc-grid" id="sc-grid"></div>
 
-  <div class="sec-lbl"><span>Today's Matchup · Spieth vs Straka</span></div>
+  <div class="sec-lbl"><span>Today's Matchups</span></div>
+  <div class="h2h-stage" style="margin-bottom:.75rem">
+    <p class="h2h-matchup-lbl">Spieth vs Straka</p>
+    <div class="h2h-face" id="h2h-spieth-straka"></div>
+  </div>
   <div class="h2h-stage">
-    <div class="h2h-face" id="h2h-board"></div>
+    <p class="h2h-matchup-lbl">Day vs Young</p>
+    <div class="h2h-face" id="h2h-day-young"></div>
   </div>
 
   <div class="sec-lbl"><span>Score Tracker</span></div>
@@ -1032,29 +1038,27 @@ function holeChip(strokes, par) {
   return '<span class="' + cls + '">' + strokes + '</span>';
 }
 
-function renderH2H() {
-  var el = document.getElementById('h2h-board');
+// Generic matchup renderer — pass elementId and array of {name, label, team} objects
+function renderMatchup(elementId, playerDefs) {
+  var el = document.getElementById(elementId);
   if (!el) return;
 
   // Use autoDetectRound as a base, but advance to the next round if it has
-  // tee times seeded for our players and hasn't actually started scoring yet.
+  // tee times seeded for any of our players and hasn't actually started scoring yet.
   var curRound = autoDetectRound();
   var nextRound = curRound + 1;
   if (nextRound <= 3 && !isRoundActuallyStarted(nextRound)) {
     var nextTimes = gd.teeTimes[nextRound];
-    if (nextTimes && typeof nextTimes === 'object' &&
-        (nextTimes['Jordan Spieth'] || nextTimes['Sepp Straka'])) {
-      curRound = nextRound;
+    if (nextTimes && typeof nextTimes === 'object') {
+      for (var di = 0; di < playerDefs.length; di++) {
+        if (nextTimes[playerDefs[di].name]) { curRound = nextRound; break; }
+      }
     }
   }
 
   var roundLabel = 'Round ' + (curRound + 1);
-  var players = [
-    { player: findPlayer('Jordan Spieth'), name: 'Jordan Spieth', label: 'Spieth', team: '#1d4ed8' },
-    { player: findPlayer('Sepp Straka'),   name: 'Sepp Straka',   label: 'Straka', team: '#b91c1c' }
-  ];
 
-  // Build column group
+  // Column group
   var colgroup = '<colgroup><col class="c-label">';
   for (var h = 0; h < 18; h++) {
     colgroup += '<col class="c-hole">';
@@ -1085,9 +1089,9 @@ function renderH2H() {
 
   // Player rows
   var bodyRows = sectionRow;
-  for (var pi = 0; pi < players.length; pi++) {
-    var info = players[pi];
-    var p = info.player;
+  for (var pi = 0; pi < playerDefs.length; pi++) {
+    var info = playerDefs[pi];
+    var p = findPlayer(info.name);
     var hs = (p && p.holeScores && p.holeScores[curRound]) ? p.holeScores[curRound] : Array(18).fill(null);
 
     var frontSum = 0, backSum = 0, frontHas = false, backHas = false;
@@ -1106,13 +1110,10 @@ function renderH2H() {
     var thru = p ? gd.playerThru[p.name] : null;
     var statusBadge = '';
     if (thru != null) {
-      // On the course right now
       statusBadge = '<span class="tee-badge">Hole ' + (thru + 1) + '</span>';
     } else if (p && p.scores && p.scores[curRound] !== null) {
-      // Finished today's round
       statusBadge = '<span class="tee-badge">F</span>';
     } else {
-      // Not yet teed off — show today's tee time
       var todayTimes = (gd.teeTimes[curRound] && typeof gd.teeTimes[curRound] === 'object') ? gd.teeTimes[curRound] : {};
       var teeTime = todayTimes[info.name] || null;
       if (teeTime) statusBadge = '<span class="tee-badge">' + teeTime + '</span>';
@@ -1127,6 +1128,17 @@ function renderH2H() {
   el.innerHTML =
     '<div class="h2h-title-bar"><div class="h2h-title-txt">Matchup</div></div>' +
     '<table class="h2h-tbl">' + colgroup + hdr + parRow + '<tbody>' + bodyRows + '</tbody></table>';
+}
+
+function renderH2H() {
+  renderMatchup('h2h-spieth-straka', [
+    { name: 'Jordan Spieth', label: 'Spieth', team: '#1d4ed8' },
+    { name: 'Sepp Straka',   label: 'Straka', team: '#b91c1c' }
+  ]);
+  renderMatchup('h2h-day-young', [
+    { name: 'Jason Day',      label: 'Day',   team: '#b91c1c' },
+    { name: 'Cameron Young',  label: 'C. Young', team: '#1d4ed8' }
+  ]);
 }
 
 function renderAll() {
