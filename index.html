@@ -197,6 +197,28 @@
       border-radius:3px; padding:.1rem .35rem;
       vertical-align:middle; white-space:nowrap;
     }
+
+    /* ── HEAD-TO-HEAD MATCHUP ── */
+    .h2h-wrap { background:var(--card-dk); border:1px solid var(--border-dk); border-radius:6px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.5); margin-bottom:1.25rem; }
+    .h2h-title-bar { background:var(--green-dk); border-bottom:2px solid var(--gold); padding:.6rem 1rem; }
+    .h2h-title-txt { font-family:'Playfair Display',serif; font-size:.82rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold); }
+    .h2h-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+    .h2h-tbl { width:100%; border-collapse:collapse; min-width:700px; }
+    .h2h-tbl col.c-label { width:110px; }
+    .h2h-tbl col.c-hole  { width:34px; }
+    .h2h-tbl col.c-sub   { width:42px; }
+    .h2h-hdr-row th { background:var(--cream2); border-bottom:2px solid var(--ink); padding:.38rem .2rem; font-size:.6rem; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink); text-align:center; }
+    .h2h-hdr-row th:first-child { text-align:left; padding-left:.75rem; }
+    .h2h-par-row td { background:var(--cream); border-bottom:1px solid var(--cream3); padding:.38rem .2rem; font-size:.72rem; font-weight:500; color:var(--ink2); text-align:center; }
+    .h2h-par-row td:first-child { text-align:left; padding-left:.75rem; font-weight:600; color:var(--ink); }
+    .h2h-section-row td { background:#132b1c; border-bottom:1px solid var(--border-dk); padding:.28rem .75rem; font-size:.6rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted-dk); }
+    .h2h-player-row td { background:var(--cream); border-bottom:1px solid var(--cream3); padding:.44rem .2rem; font-size:.8rem; text-align:center; color:var(--ink); }
+    .h2h-player-row:last-child td { border-bottom:none; }
+    .h2h-player-row td:first-child { text-align:left; padding-left:.75rem; }
+    .h2h-tbl td.c-divider, .h2h-tbl th.c-divider { background:var(--cream2); border-left:2px solid var(--ink); font-weight:800; }
+    .h2h-tbl .s-under { background:#c8f0c8; color:#005500; border-radius:3px; display:inline-block; min-width:22px; padding:.05rem .2rem; font-weight:700; }
+    .h2h-tbl .s-over  { background:#f8c8c8; color:#880000; border-radius:3px; display:inline-block; min-width:22px; padding:.05rem .2rem; font-weight:700; }
+    .h2h-tbl .s-even  { color:var(--ink); font-weight:500; }
   </style>
 </head>
 <body>
@@ -238,6 +260,10 @@
 
   <div class="sec-lbl"><span>Team Scorecards</span></div>
   <div class="sc-grid" id="sc-grid"></div>
+
+  <div class="sec-lbl"><span>Head-to-Head Matchups</span></div>
+  <div class="h2h-wrap" id="h2h-spieth-straka"></div>
+  <div class="h2h-wrap" id="h2h-day-young"></div>
 
   <div class="sec-lbl"><span>Score Tracker</span></div>
   <div class="chart-panel">
@@ -407,6 +433,38 @@ if (!gd.playerThru) gd.playerThru = {};
       for (var pi = 0; pi < gd[teamKeys[ti]].length; pi++) {
         if (gd[teamKeys[ti]][pi].name === cname) {
           gd[teamKeys[ti]][pi].cutMissed = true;
+        }
+      }
+    }
+  }
+  localStorage.setItem('masters2026bet', JSON.stringify(gd));
+})();
+
+// ── SEED R3 HOLE SCORES (Spieth/Straka thru H14, Young/Day thru H3, Apr 11) ──
+// Pre-populated from ESPN scorecard screenshots. The guard below only applies
+// seed data when live ESPN hole data is absent or behind — live always wins.
+(function() {
+  var seeds = {
+    'Jordan Spieth': [4,5,3,4,4,2,4,4,4, 4,4,3,6,4, null,null,null,null],
+    'Sepp Straka':   [4,4,3,3,4,3,4,5,4, 3,5,3,4,4, null,null,null,null],
+    'Cameron Young': [4,5,3, null,null,null,null,null,null, null,null,null,null,null,null,null,null,null],
+    'Jason Day':     [5,4,4, null,null,null,null,null,null, null,null,null,null,null,null,null,null,null]
+  };
+  var teamKeys = Object.keys(TEAMS);
+  for (var name in seeds) {
+    for (var ti = 0; ti < teamKeys.length; ti++) {
+      var ps = gd[teamKeys[ti]];
+      for (var pi = 0; pi < ps.length; pi++) {
+        if (ps[pi].name === name) {
+          if (!ps[pi].holeScores) ps[pi].holeScores = [Array(18).fill(null),Array(18).fill(null),Array(18).fill(null),Array(18).fill(null)];
+          // Fill null slots from the seed. Existing non-null values (from ESPN or
+          // a prior seed) are never overwritten — seed is additive only.
+          var seedArr = seeds[name];
+          for (var h = 0; h < 18; h++) {
+            if (ps[pi].holeScores[2][h] === null && seedArr[h] !== null) {
+              ps[pi].holeScores[2][h] = seedArr[h];
+            }
+          }
         }
       }
     }
@@ -1091,9 +1149,10 @@ function renderMatchup(elementId, playerDefs) {
       '<td class="c-divider">' + totCell + '</td></tr>';
   }
 
+  var names = playerDefs.map(function(d) { return d.label; }).join(' vs ');
   el.innerHTML =
-    '<div class="h2h-title-bar"><div class="h2h-title-txt">Matchup</div></div>' +
-    '<table class="h2h-tbl">' + colgroup + hdr + parRow + '<tbody>' + bodyRows + '</tbody></table>';
+    '<div class="h2h-title-bar"><div class="h2h-title-txt">' + names + '</div></div>' +
+    '<div class="h2h-scroll"><table class="h2h-tbl">' + colgroup + hdr + parRow + '<tbody>' + bodyRows + '</tbody></table></div>';
 }
 
 function renderH2H() {
