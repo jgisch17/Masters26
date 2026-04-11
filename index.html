@@ -472,6 +472,27 @@ if (!gd.playerThru) gd.playerThru = {};
   localStorage.setItem('masters2026bet', JSON.stringify(gd));
 })();
 
+// ── FORCE CORRECTIONS (overwrite specific wrong cached values) ──
+(function() {
+  var corrections = [
+    { name: 'Jason Day', round: 2, hole: 3, strokes: 3 }  // H4 index 3, par 3 → birdie
+  ];
+  var teamKeys = Object.keys(TEAMS);
+  for (var ci = 0; ci < corrections.length; ci++) {
+    var c = corrections[ci];
+    for (var ti = 0; ti < teamKeys.length; ti++) {
+      var ps = gd[teamKeys[ti]];
+      for (var pi = 0; pi < ps.length; pi++) {
+        if (ps[pi].name === c.name) {
+          if (!ps[pi].holeScores) ps[pi].holeScores = [Array(18).fill(null),Array(18).fill(null),Array(18).fill(null),Array(18).fill(null)];
+          ps[pi].holeScores[c.round][c.hole] = c.strokes;
+        }
+      }
+    }
+  }
+  localStorage.setItem('masters2026bet', JSON.stringify(gd));
+})();
+
 // ── CLEAN UP BOGUS HISTORY ENTRIES ──
 // The old isRoundStarted bug treated cut players as proof a round started,
 // so snapshots were saved with inflated round labels (e.g. "R4 · 05:06 PM")
