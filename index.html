@@ -578,8 +578,12 @@ function renderLB() {
 
     var rCols = '';
     for (var r = 0; r < 4; r++) {
-      var rt = teamRoundTotal(key, r);
-      rCols += '<div class="b-score ' + scoreClass(rt) + '">' + fmt(rt) + '</div>';
+      if (r >= 2 && !isRoundActuallyStarted(r)) {
+        rCols += '<div class="b-score">&mdash;</div>';
+      } else {
+        var rt = teamRoundTotal(key, r);
+        rCols += '<div class="b-score ' + scoreClass(rt) + '">' + fmt(rt) + '</div>';
+      }
     }
 
     var row = document.createElement('div');
