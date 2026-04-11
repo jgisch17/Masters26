@@ -1045,6 +1045,33 @@ function holeChip(strokes, par) {
   return '<span class="' + cls + '">' + strokes + '</span>';
 }
 
+// Injects a synthetic "R3 · Start" snapshot with pre-penalty scores (R1+R2 only)
+// so the chart boundary line appears BEFORE the +5 jump, not at it.
+// Idempotent — bails out if an R3 entry already exists in history.
+function injectR3StartSnapshot() {
+  if (!ROUNDS_STARTED[2]) return;
+  var h = gd.history;
+  for (var i = 0; i < h.length; i++) {
+    if (h[i].label && /^R3/.test(h[i].label)) return;
+  }
+  // Scores through R2 only — no R3 penalty yet
+  var scores = {};
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    var key = keys[i];
+    var sum = 0;
+    for (var r = 0; r <= 1; r++) {
+      var rt = teamRoundTotal(key, r);
+      if (rt !== null) sum += rt;
+    }
+    scores[key] = sum;
+  }
+  // Timestamp slightly in the past so addSnapshot() doesn't skip the next real snapshot
+  var t = new Date(Date.now() - 16 * 60 * 1000);
+  h.push({ timestamp: t.toISOString(), label: 'R3 \u00b7 Start', scores: scores });
+  localStorage.setItem('masters2026bet', JSON.stringify(gd));
+}
+
 // Generic matchup renderer — pass elementId and array of {name, label, team} objects
 function renderMatchup(elementId, playerDefs) {
   var el = document.getElementById(elementId);
@@ -1143,8 +1170,8 @@ function renderH2H() {
     { name: 'Sepp Straka',   label: 'Straka', team: '#b91c1c' }
   ]);
   renderMatchup('h2h-day-young', [
-    { name: 'Jason Day',      label: 'Day',   team: '#b91c1c' },
-    { name: 'Cameron Young',  label: 'C. Young', team: '#1d4ed8' }
+    { name: 'Cameron Young',  label: 'C. Young', team: '#1d4ed8' },
+    { name: 'Jason Day',      label: 'Day',      team: '#b91c1c' }
   ]);
 }
 
@@ -1390,6 +1417,7 @@ function fetchLive() {
         activeRound = Math.max(0, Math.min(3, competition.status.period - 1));
       }
       var result = applyCompetitors(competitors, activeRound);
+      injectR3StartSnapshot();
       addSnapshot();
       localStorage.setItem('masters2026bet', JSON.stringify(gd));
       liveActive = true;
@@ -1423,6 +1451,7 @@ function fetchLive() {
     });
 }
 
+injectR3StartSnapshot();
 renderAll();
 updateStamp();
 initChart();
