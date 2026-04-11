@@ -1252,6 +1252,11 @@ function applyCompetitors(competitors, activeRound) {
       // (Per-round summaries have at most 4 entries; in-progress players always have hole data.)
       var ls = comp.linescores || [];
 
+      // Snapshot pre-update state for per-round summary inference below
+      var oldRoundScore = ps[pi].scores[activeRound];
+      var oldThruVal    = gd.playerThru[ps[pi].name] != null ? gd.playerThru[ps[pi].name] : -1;
+      var usedSummaryFmt = false;
+
       // ESPN sometimes sends a mixed format: completed-round totals (value ≥ 60)
       // prepended to the current round's per-hole entries (value 1-15 or displayValue "-").
       // Detect completed-round prefix entries so we can handle both in one pass.
@@ -1296,6 +1301,7 @@ function applyCompetitors(competitors, activeRound) {
         // Per-round summary format (≤ 4 entries — one per completed/active round).
         // Only overwrite a round's score if ESPN gives a non-null value, so that
         // a temporarily-missing entry doesn't erase a previously-fetched score.
+        usedSummaryFmt = true;
         for (var r = 0; r < 4; r++) {
           var val = parseRoundScore(ls[r]);
           if (val !== null) {
@@ -1376,6 +1382,29 @@ function applyCompetitors(competitors, activeRound) {
         gd.playerThru[ps[pi].name] = thru;
       } else {
         delete gd.playerThru[ps[pi].name];
+      }
+
+      // ── Infer hole-by-hole scores from score delta + thru change ──
+      // When ESPN sends per-round summaries (not per-hole data), use the thru
+      // counter to know which hole just finished, and the score delta to get
+      // the stroke count.  Works for par holes (delta = 0) too.
+      if (usedSummaryFmt) {
+        var newRoundScore2 = ps[pi].scores[activeRound];
+        // Treat STATUS_COMPLETE as thru=18 so the last hole gets filled
+        var newThruVal = gd.playerThru[ps[pi].name] != null ? gd.playerThru[ps[pi].name]
+                       : (sTypeName === 'STATUS_COMPLETE' ? 18 : -1);
+        // Normalise oldThru: treat "no prior data" as 0 only when newThru is 1
+        // (player just completed their first hole).  Otherwise require prior data.
+        var oldThruNorm = (oldThruVal >= 0) ? oldThruVal : (newThruVal === 1 ? 0 : newThruVal);
+        var holesAdv = newThruVal - oldThruNorm;
+        if (holesAdv === 1 && newThruVal >= 1 && newThruVal <= 18 &&
+            newRoundScore2 !== null && oldRoundScore !== null) {
+          var hIdx = newThruVal - 1; // 0-indexed hole that was just completed
+          if (hIdx >= 0 && hIdx < 18 && ps[pi].holeScores[activeRound][hIdx] === null) {
+            var scoreDelta = newRoundScore2 - oldRoundScore;
+            ps[pi].holeScores[activeRound][hIdx] = AUGUSTA_PARS[hIdx] + scoreDelta;
+          }
+        }
       }
     }
   }
