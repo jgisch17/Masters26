@@ -197,6 +197,13 @@
       border-radius:3px; padding:.1rem .35rem;
       vertical-align:middle; white-space:nowrap;
     }
+    /* ── LEADERBOARD POSITION BADGE (in scorecard player rows) ── */
+    .sc-pos {
+      display:inline-block; min-width:26px;
+      font-size:.68rem; font-weight:800; letter-spacing:.4px;
+      color:var(--green-dk); margin-right:.3rem;
+      text-align:right; vertical-align:middle;
+    }
 
     /* ── HEAD-TO-HEAD MATCHUP ── */
     .h2h-wrap { background:var(--card-dk); border:1px solid var(--border-dk); border-radius:6px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.5); margin-bottom:1.25rem; }
@@ -402,6 +409,29 @@ if (!gd.playerThru) gd.playerThru = {};
   };
   for (var name in r3Times) {
     if (!r3[name]) r3[name] = r3Times[name];
+  }
+})();
+
+// ── SEED R4 TEE TIMES (Sunday Apr 12) ──
+// These are hardcoded from the official pairings; fetchLive() will overwrite if API data differs.
+(function() {
+  if (!gd.teeTimes[3] || typeof gd.teeTimes[3] !== 'object') gd.teeTimes[3] = {};
+  var r4 = gd.teeTimes[3];
+  var r4Times = {
+    'Jon Rahm':             '6:28 AM PT',
+    'Jordan Spieth':        '8:07 AM PT',
+    'Hideki Matsuyama':     '8:18 AM PT',
+    'Sepp Straka':          '8:29 AM PT',
+    'Ludvig Aberg':         '9:24 AM PT',
+    'Tommy Fleetwood':      '9:35 AM PT',
+    'Brooks Koepka':        '9:46 AM PT',
+    'Xander Schauffele':    '9:57 AM PT',
+    'Scottie Scheffler':    '10:52 AM PT',
+    'Jason Day':            '11:03 AM PT',
+    'Cameron Young':        '11:25 AM PT'
+  };
+  for (var name in r4Times) {
+    if (!r4[name]) r4[name] = r4Times[name];
   }
 })();
 
@@ -735,9 +765,47 @@ function isRoundActuallyStarted(r) {
   return false;
 }
 
+function computePlayerPositions() {
+  // Prefer ESPN full-field positions if available
+  if (Object.keys(fieldPositions).length > 0) return fieldPositions;
+
+  // Fallback: rank only within the tracked players (pre-live or ESPN miss)
+  var byName = {};
+  var keys = Object.keys(TEAMS);
+  for (var i = 0; i < keys.length; i++) {
+    var ps = gd[keys[i]];
+    for (var j = 0; j < ps.length; j++) {
+      if (!byName[ps[j].name]) byName[ps[j].name] = ps[j];
+    }
+  }
+  var allPlayers = [];
+  for (var nm in byName) allPlayers.push(byName[nm]);
+
+  var withScores = [], noScores = [];
+  for (var n = 0; n < allPlayers.length; n++) {
+    (playerTotal(allPlayers[n]) !== null ? withScores : noScores).push(allPlayers[n]);
+  }
+  withScores.sort(function(a, b) { return playerTotal(a) - playerTotal(b); });
+
+  var positions = {};
+  var i = 0;
+  while (i < withScores.length) {
+    var score = playerTotal(withScores[i]);
+    var j = i;
+    while (j < withScores.length && playerTotal(withScores[j]) === score) j++;
+    var count = j - i;
+    var posStr = count > 1 ? 'T' + (i + 1) : '' + (i + 1);
+    for (var k = i; k < j; k++) positions[withScores[k].name] = posStr;
+    i = j;
+  }
+  for (var n = 0; n < noScores.length; n++) positions[noScores[n].name] = '';
+  return positions;
+}
+
 function renderSCRounds(card, team, players, key) {
   var total = teamTotal(key);
   var curRound = autoDetectRound();
+  var playerPositions = computePlayerPositions();
   var tbl = document.createElement('table');
   tbl.className = 'sc-tbl';
   tbl.innerHTML =
@@ -794,8 +862,9 @@ function renderSCRounds(card, team, players, key) {
     }
 
     var mcBadge = p.cutMissed ? '<span class="mc-badge">MC</span>' : '';
+    var posLabel = playerPositions[p.name] ? '<span class="sc-pos">' + playerPositions[p.name] + '</span>' : '';
     tr.innerHTML =
-      '<td>' + p.name + mcBadge + teeBadge + '</td>' +
+      '<td>' + posLabel + p.name + mcBadge + teeBadge + '</td>' +
       rCells +
       '<td class="' + scoreClass(pTotal) + '" style="font-weight:800">' + fmtPlain(pTotal) + '</td>';
     tbody.appendChild(tr);
@@ -1195,6 +1264,8 @@ var ESPNURL = 'https://site.api.espn.com/apis/site/v2/sports/golf/leaderboard?li
 var liveTimer = null;
 var countdownTimer = null;
 var nextRefreshAt = null;
+// Full-field leaderboard positions from ESPN: { "Scottie Scheffler": "1", "Ludvig Aberg": "T3", ... }
+var fieldPositions = {};
 
 function normName(s) {
   return s.toLowerCase()
@@ -1328,6 +1399,10 @@ function applyCompetitors(competitors, activeRound) {
           }
         }
       }
+
+      // Full-field leaderboard position from ESPN
+      var espnPos = comp.status && comp.status.position && comp.status.position.displayName;
+      if (espnPos) fieldPositions[ps[pi].name] = espnPos;
 
       // Missed cut / WD / DQ
       var sname = comp.status && comp.status.type && comp.status.type.name || '';
