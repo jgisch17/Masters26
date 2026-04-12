@@ -204,28 +204,6 @@
       color:var(--green-dk); margin-right:.3rem;
       text-align:right; vertical-align:middle;
     }
-
-    /* ── HEAD-TO-HEAD MATCHUP ── */
-    .h2h-wrap { background:var(--card-dk); border:1px solid var(--border-dk); border-radius:6px; overflow:hidden; box-shadow:0 8px 32px rgba(0,0,0,.5); margin-bottom:1.25rem; }
-    .h2h-title-bar { background:var(--green-dk); border-bottom:2px solid var(--gold); padding:.6rem 1rem; }
-    .h2h-title-txt { font-family:'Playfair Display',serif; font-size:.82rem; font-weight:700; letter-spacing:2.5px; text-transform:uppercase; color:var(--gold); }
-    .h2h-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
-    .h2h-tbl { width:100%; border-collapse:collapse; min-width:700px; }
-    .h2h-tbl col.c-label { width:110px; }
-    .h2h-tbl col.c-hole  { width:34px; }
-    .h2h-tbl col.c-sub   { width:42px; }
-    .h2h-hdr-row th { background:var(--cream2); border-bottom:2px solid var(--ink); padding:.38rem .2rem; font-size:.6rem; font-weight:800; letter-spacing:1.2px; text-transform:uppercase; color:var(--ink); text-align:center; }
-    .h2h-hdr-row th:first-child { text-align:left; padding-left:.75rem; }
-    .h2h-par-row td { background:var(--cream); border-bottom:1px solid var(--cream3); padding:.38rem .2rem; font-size:.72rem; font-weight:500; color:var(--ink2); text-align:center; }
-    .h2h-par-row td:first-child { text-align:left; padding-left:.75rem; font-weight:600; color:var(--ink); }
-    .h2h-section-row td { background:#132b1c; border-bottom:1px solid var(--border-dk); padding:.28rem .75rem; font-size:.6rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:var(--muted-dk); }
-    .h2h-player-row td { background:var(--cream); border-bottom:1px solid var(--cream3); padding:.44rem .2rem; font-size:.8rem; text-align:center; color:var(--ink); }
-    .h2h-player-row:last-child td { border-bottom:none; }
-    .h2h-player-row td:first-child { text-align:left; padding-left:.75rem; }
-    .h2h-tbl td.c-divider, .h2h-tbl th.c-divider { background:var(--cream2); border-left:2px solid var(--ink); font-weight:800; }
-    .h2h-tbl .s-under { background:#c8f0c8; color:#005500; border-radius:3px; display:inline-block; min-width:22px; padding:.05rem .2rem; font-weight:700; }
-    .h2h-tbl .s-over  { background:#f8c8c8; color:#880000; border-radius:3px; display:inline-block; min-width:22px; padding:.05rem .2rem; font-weight:700; }
-    .h2h-tbl .s-even  { color:var(--ink); font-weight:500; }
   </style>
 </head>
 <body>
@@ -267,9 +245,6 @@
 
   <div class="sec-lbl"><span>Team Scorecards</span></div>
   <div class="sc-grid" id="sc-grid"></div>
-
-  <div class="sec-lbl"><span>Head-to-Head Matchups</span></div>
-  <div class="h2h-wrap" id="h2h-day-young"></div>
 
   <div class="sec-lbl"><span>Score Tracker</span></div>
   <div class="chart-panel">
@@ -1145,116 +1120,9 @@ function injectR3StartSnapshot() {
   localStorage.setItem('masters2026bet', JSON.stringify(gd));
 }
 
-// Generic matchup renderer — pass elementId and array of {name, label, team} objects
-function renderMatchup(elementId, playerDefs) {
-  var el = document.getElementById(elementId);
-  if (!el) return;
-
-  // Use autoDetectRound as a base, but advance to the next round if we're
-  // in the gap between rounds (tee times seeded, no scoring yet).
-  // Never advance if any matchup player is currently on the course —
-  // that means the current round is still active, not finished.
-  var curRound = autoDetectRound();
-  var anyOnCourse = false;
-  for (var di = 0; di < playerDefs.length; di++) {
-    if (gd.playerThru[playerDefs[di].name] != null) { anyOnCourse = true; break; }
-  }
-  var nextRound = curRound + 1;
-  if (!anyOnCourse && nextRound <= 3 && !isRoundActuallyStarted(nextRound)) {
-    var nextTimes = gd.teeTimes[nextRound];
-    if (nextTimes && typeof nextTimes === 'object') {
-      for (var di = 0; di < playerDefs.length; di++) {
-        if (nextTimes[playerDefs[di].name]) { curRound = nextRound; break; }
-      }
-    }
-  }
-
-  var roundLabel = 'Round ' + (curRound + 1);
-
-  // Column group
-  var colgroup = '<colgroup><col class="c-label">';
-  for (var h = 0; h < 18; h++) {
-    colgroup += '<col class="c-hole">';
-    if (h === 8) colgroup += '<col class="c-sub">';
-  }
-  colgroup += '<col class="c-sub"><col class="c-sub"></colgroup>';
-
-  // Header row
-  var hdrHoles = '';
-  for (var h = 0; h < 18; h++) {
-    hdrHoles += '<th>' + (h + 1) + '</th>';
-    if (h === 8) hdrHoles += '<th class="c-divider">OUT</th>';
-  }
-  var hdr = '<thead><tr class="h2h-hdr-row"><th>Player</th>' + hdrHoles + '<th class="c-divider">IN</th><th class="c-divider">TOT</th></tr>';
-
-  // Par row
-  var parCells = '';
-  var frontPar = 0, backPar = 0;
-  for (var h = 0; h < 18; h++) {
-    parCells += '<td>' + AUGUSTA_PARS[h] + '</td>';
-    if (h < 9) frontPar += AUGUSTA_PARS[h]; else backPar += AUGUSTA_PARS[h];
-    if (h === 8) parCells += '<td class="c-divider">' + frontPar + '</td>';
-  }
-  var parRow = '<tr class="h2h-par-row"><td>Par</td>' + parCells + '<td class="c-divider">' + backPar + '</td><td class="c-divider">72</td></tr></thead>';
-
-  // Section row
-  var sectionRow = '<tr class="h2h-section-row"><td colspan="22">' + roundLabel + ' · Augusta National</td></tr>';
-
-  // Player rows
-  var bodyRows = sectionRow;
-  for (var pi = 0; pi < playerDefs.length; pi++) {
-    var info = playerDefs[pi];
-    var p = findPlayer(info.name);
-    var hs = (p && p.holeScores && p.holeScores[curRound]) ? p.holeScores[curRound] : Array(18).fill(null);
-
-    var frontSum = 0, backSum = 0, frontHas = false, backHas = false;
-    var holeCells = '';
-    for (var h = 0; h < 18; h++) {
-      var strokes = hs[h];
-      holeCells += '<td>' + holeChip(strokes, AUGUSTA_PARS[h]) + '</td>';
-      if (h < 9 && strokes !== null) { frontSum += strokes; frontHas = true; }
-      if (h >= 9 && strokes !== null) { backSum += strokes; backHas = true; }
-      if (h === 8) holeCells += '<td class="c-divider">' + (frontHas ? frontSum : '—') + '</td>';
-    }
-    var inCell = backHas ? backSum : '—';
-    var totCell = (frontHas && backHas) ? (frontSum + backSum) : (frontHas ? frontSum : '—');
-
-    // Status badge: current hole if in-progress, "F" if finished, tee time if not yet started
-    var thru = p ? gd.playerThru[p.name] : null;
-    var statusBadge = '';
-    if (thru != null) {
-      statusBadge = '<span class="hole-badge">Hole ' + (thru + 1) + '</span>';
-    } else if (p && p.scores && p.scores[curRound] !== null) {
-      statusBadge = '<span class="tee-badge">F</span>';
-    } else {
-      var todayTimes = (gd.teeTimes[curRound] && typeof gd.teeTimes[curRound] === 'object') ? gd.teeTimes[curRound] : {};
-      var teeTime = todayTimes[info.name] || null;
-      if (teeTime) statusBadge = '<span class="tee-badge">' + teeTime + '</span>';
-    }
-
-    var nameCell = '<span style="color:' + info.team + ';font-weight:800">' + info.label.toUpperCase() + '</span>' + statusBadge;
-    bodyRows += '<tr class="h2h-player-row"><td>' + nameCell + '</td>' + holeCells +
-      '<td class="c-divider">' + inCell + '</td>' +
-      '<td class="c-divider">' + totCell + '</td></tr>';
-  }
-
-  var names = playerDefs.map(function(d) { return d.label; }).join(' vs ');
-  el.innerHTML =
-    '<div class="h2h-title-bar"><div class="h2h-title-txt">' + names + '</div></div>' +
-    '<div class="h2h-scroll"><table class="h2h-tbl">' + colgroup + hdr + parRow + '<tbody>' + bodyRows + '</tbody></table></div>';
-}
-
-function renderH2H() {
-  renderMatchup('h2h-day-young', [
-    { name: 'Cameron Young',  label: 'C. Young', team: '#1d4ed8' },
-    { name: 'Jason Day',      label: 'Day',      team: '#b91c1c' }
-  ]);
-}
-
 function renderAll() {
   renderLB();
   renderSC();
-  renderH2H();
   updateChart();
   renderCutLine();
 }
